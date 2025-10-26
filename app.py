@@ -103,10 +103,10 @@ if st.session_state.current_page == "setup":
     with st.expander("Add New Player"):
         team_name = st.text_input("Team Name")
         player_name = st.text_input("Player Name")
+        savings_goal_desc = st.text_input("Savings Goal Description", placeholder="E.g., buy a car, emergency fund...")
         needs = st.number_input("Needs allocation", value=int(income*0.5), step=50, format="%d")
         wants = st.number_input("Wants allocation", value=int(income*0.25), step=50, format="%d")
         savings_alloc = st.number_input("Savings allocation", value=int(income*0.25), step=50, format="%d")
-        savings_goal_desc = st.text_input("Savings Goal Description", placeholder="E.g., buy a car, emergency fund...")
 
         total_alloc = needs + wants + savings_alloc
         if total_alloc != income:
@@ -138,10 +138,11 @@ if st.session_state.current_page == "game" and st.session_state.players:
     # Two-column layout
     left_col, right_col = st.columns([2,1])
 
+    # -------- LEFT COLUMN --------
     with left_col:
-        # Draw card
         if st.button("Draw Card"):
             st.session_state.current_card = random.choice(cards)
+            st.session_state.rerun_flag = True
 
         card = st.session_state.current_card
         if card:
@@ -158,19 +159,36 @@ if st.session_state.current_page == "game" and st.session_state.players:
                 if not valid:
                     st.warning(msg)
                 else:
+                    # Apply effects
                     st.session_state.players[st.session_state.current_player] = apply_effects(player, selected_option)
-                    st.session_state.current_card = None
                     st.session_state.players[st.session_state.current_player]["round"] += 1
-                    # Next player
+                    st.session_state.current_card = None
+                    # Move to next player
                     st.session_state.current_player = (st.session_state.current_player + 1) % len(st.session_state.players)
                     st.session_state.rerun_flag = True
 
+    # -------- RIGHT COLUMN (Player Stats) --------
     with right_col:
         st.markdown("### Player Status")
-        st.markdown(f"**Savings Goal:** {player['savings_goal_desc']}")
-        st.markdown(f"**Savings:** {format_currency(player['savings'])} {color_bar(player['savings']/goal*10)}")
+        st.markdown(f"**Savings Goal:** {player['savings_goal_desc']} ({format_currency(goal)})")
+        st.markdown(f"**Savings:** {format_currency(player['savings'])}")
         st.progress(min(player['savings']/goal,1.0))
+        st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
+
+        # Allow player to adjust monthly allocation for next round
+        st.markdown("**Monthly Budget Allocation (adjust for next round)**")
+        col1, col2, col3 = st.columns(3)
+        needs_new = col1.number_input("Needs", value=player["allocation"]["needs"], step=50, key=f"needs_{player['name']}")
+        wants_new = col2.number_input("Wants", value=player["allocation"]["wants"], step=50, key=f"wants_{player['name']}")
+        savings_new = col3.number_input("Savings", value=player["allocation"]["savings"], step=50, key=f"savings_{player['name']}")
+        total_new = needs_new + wants_new + savings_new
+        if total_new != player["income"]:
+            st.warning(f"Allocation must sum to monthly income ({player['income']:,}). Current total: {total_new:,}")
+        else:
+            player["allocation"] = {"needs": needs_new, "wants": wants_new, "savings": savings_new}
+
+        # Wellbeing and Time
         st.markdown(f"**Well-being:** {player['emotion']}/10 {color_bar(player['emotion'])}")
         st.markdown(f"**Energy:** {player['time']}/10 {color_bar(player['time'])}")
-        st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
         st.markdown(f"**Round:** {player['round']} / {rounds}")
+
