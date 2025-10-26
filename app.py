@@ -1,6 +1,7 @@
 import streamlit as st
 import random
 import json
+import os
 
 # --------------------------------
 # Initialize session state
@@ -15,16 +16,17 @@ if "current_card" not in st.session_state:
     st.session_state.current_card = None
 
 if "facilitator_settings" not in st.session_state:
-    st.session_state.facilitator_settings = {
-        "goal": 5000,
-        "income": 2000,
-        "allocation": {"needs": 1000, "wants": 500, "savings": 500}
-    }
+    st.session_state.facilitator_settings = {"goal": 5000, "income": 2000}
 
 # --------------------------------
 # Load cards
 # --------------------------------
-with open("data/life_cards.json", "r") as f:
+cards_file = "data/life_cards.json"
+if not os.path.exists(cards_file):
+    st.error(f"Card file not found: {cards_file}")
+    st.stop()
+
+with open(cards_file, "r") as f:
     cards = json.load(f)
 
 # --------------------------------
@@ -52,98 +54,86 @@ def format_option_text(opt):
 # Facilitator setup
 # --------------------------------
 st.sidebar.header("Facilitator Setup")
-
-# Add input verification: only allow non-negative numbers
-goal = st.sidebar.number_input(
-    "Savings goal",
-    value=st.session_state.facilitator_settings["goal"],
-    min_value=0
-)
-income = st.sidebar.number_input(
-    "Monthly income",
-    value=st.session_state.facilitator_settings["income"],
-    min_value=0
-)
-needs = st.sidebar.number_input(
-    "Needs allocation",
-    value=st.session_state.facilitator_settings["allocation"]["needs"],
-    min_value=0
-)
-wants = st.sidebar.number_input(
-    "Wants allocation",
-    value=st.session_state.facilitator_settings["allocation"]["wants"],
-    min_value=0
-)
-savings_alloc = st.sidebar.number_input(
-    "Savings allocation",
-    value=st.session_state.facilitator_settings["allocation"]["savings"],
-    min_value=0
-)
-
-total_alloc = needs + wants + savings_alloc
-if total_alloc != income:
-    st.sidebar.error(
-        f"Total allocation (needs+wants+savings={total_alloc}) must equal income ({income})"
-    )
-    st.stop()
+goal = st.sidebar.number_input("Savings goal for all", value=st.session_state.facilitator_settings["goal"])
+income = st.sidebar.number_input("Monthly income for all", value=st.session_state.facilitator_settings["income"])
 
 # Save facilitator settings
 st.session_state.facilitator_settings = {
     "goal": goal,
-    "income": income,
-    "allocation": {"needs": needs, "wants": wants, "savings": savings_alloc},
+    "income": income
 }
 
 # --------------------------------
 # Player setup
 # --------------------------------
 st.header("Players")
-player_name = st.text_input("Enter your name")
+with st.form("add_player_form"):
+    team_name = st.text_input("Team Name")
+    player_name = st.text_input("Player Name")
+    savings_goal_desc = st.text_input("Savings Goal Description")
+    needs = st.number_input("Needs allocation", value=int(st.session_state.facilitator_settings["income"]*0.5))
+    wants = st.number_input("Wants allocation", value=int(st.session_state.facilitator_settings["income"]*0.25))
+    savings_alloc = st.number_input("Savings allocation", value=int(st.session_state.facilitator_settings["income"]*0.25))
+    total_alloc = needs + wants + savings_alloc
 
-if st.button("Add Player") and player_name:
-    st.session_state.players.append({
-        "name": player_name,
-        "savings": savings_alloc,
-        "emotion": 5,
-        "time": 5,
-        "income": income,
-        "allocation": {"needs": needs, "wants": wants, "savings": savings_alloc},
-    })
-    st.success(f"Player {player_name} added!")
+    if st.form_submit_button("Add Player"):
+        if not player_name or not team_name:
+            st.warning("Team Name and Player Name are required!")
+        elif total_alloc != st.session_state.facilitator_settings["income"]:
+            st.warning(f"Total allocation ({total_alloc}) must equal income ({st.session_state.facilitator_settings['income']})")
+        else:
+            st.session_state.players.append({
+                "team_name": team_name,
+                "name": player_name,
+                "savings_goal_desc": savings_goal_desc,
+                "savings": savings_alloc,
+                "emotion": 5,
+                "time": 5,
+                "income": st.session_state.facilitator_settings["income"],
+                "allocation": {"needs": needs, "wants": wants, "savings": savings_alloc},
+            })
+            st.success(f"Player {player_name} added!")
 
 # --------------------------------
 # Game logic
 # --------------------------------
 if st.session_state.players:
     player = st.session_state.players[st.session_state.current_player]
-    st.subheader(f"Current Player: {player['name']}")
 
-    # Draw card
-    if st.button("Draw Card"):
-        st.session_state.current_card = random.choice(cards)
+    left_col, right_col = st.columns([2,1])
 
-    card = st.session_state.current_card
-    if card:
-        st.markdown(f"**Card:** {card['title']}")
-        option_choice = st.radio(
-            "Choose an option",
-            [format_option_text(opt) for opt in card["options"]],
-            key=f"choice_{player['name']}"
-        )
-        selected_option = card["options"][
-            [format_option_text(opt) for opt in card["options"]].index(option_choice)
-        ]
+    with left_col:
+        st.subheader(f"Current Player: {player['name']} ({player['team_name']})")
 
-        if st.button("Submit Option"):
-            valid, msg = is_valid_option(player, selected_option)
-            if not valid:
-                st.warning(msg)
-            else:
-                player = apply_effects(player, selected_option)
-                st.success("Option applied!")
-                st.session_state.current_card = None  # Reset card
-                st.experimental_rerun()  # Refresh to next player
+        if st.button("Draw Card"):
+            st.session_state.current_card = random.choice(cards)
 
-    st.markdown(
-        f"**Savings:** {player['savings']}, **Well-being:** {player['emotion']}, **Energy:** {player['time']}"
-    )
+        card = st.session_state.current_card
+        if card:
+            st.markdown(f"**Card:** {card['title']}")
+            option_choice = st.radio(
+                "Choose an option",
+                [format_option_text(opt) for opt in card["options"]],
+                key=f"choice_{player['name']}"
+            )
+            selected_option = card["options"][[format_option_text(opt) for opt in card["options"]].index(option_choice)]
+
+            if st.button("Submit Option"):
+                valid, msg = is_valid_option(player, selected_option)
+                if not valid:
+                    st.warning(msg)
+                else:
+                    # Apply changes
+                    st.session_state.players[st.session_state.current_player] = apply_effects(player, selected_option)
+                    st.session_state.current_card = None  # Reset card
+                    # Move to next player safely
+                    st.session_state.current_player = (st.session_state.current_player + 1) % len(st.session_state.players)
+                    st.experimental_rerun()
+
+    with right_col:
+        st.subheader("Player Status")
+        st.markdown(f"**Savings Goal:** {player.get('savings_goal_desc','')}")
+        st.markdown(f"**Savings:** {player['savings']}")
+        st.markdown(f"**Well-being:** {player['emotion']}")
+        st.markdown(f"**Energy:** {player['time']}")
+        st.markdown(f"**Allocation:** Needs {player['allocation']['needs']}, Wants {player['allocation']['wants']}, Savings {player['allocation']['savings']}")
