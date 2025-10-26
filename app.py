@@ -95,6 +95,12 @@ if not st.session_state.player_created:
         step=50,
         value=st.session_state.facilitator_settings["goal"],
     )
+
+    st.subheader("💰 Initial Budget Allocation")
+    needs = st.number_input("Needs (SAR)", min_value=0, step=50, value=1000)
+    wants = st.number_input("Wants (SAR)", min_value=0, step=50, value=500)
+    saving = st.number_input("Savings (SAR)", min_value=0, step=50, value=500)
+
     if st.button("Create Player") and player_name and team_name:
         st.session_state.players.append(
             {
@@ -106,12 +112,13 @@ if not st.session_state.player_created:
                 "emotion": 5,
                 "time": 5,
                 "income": st.session_state.facilitator_settings["income"],
-                "allocation": {"needs": 1000, "wants": 500, "savings": 500},
+                "allocation": {"needs": needs, "wants": wants, "savings": saving},
                 "rounds_played": 0,
                 "decision_log": [],
             }
         )
         st.session_state.player_created = True
+        st.rerun()
 
 if st.session_state.player_created:
     player = st.session_state.players[st.session_state.current_player]
@@ -151,9 +158,9 @@ if st.session_state.player_created:
                 else:
                     player = apply_effects(player, selected_option)
                     player["rounds_played"] += 1
-                    st.session_state.current_card = None  # Clear card instantly
+                    st.session_state.current_card = None
                     st.session_state.players[st.session_state.current_player] = player
-                    st.rerun()  # Simple rerun once safely
+                    st.rerun()
 
     # -------------------------------
     # Player stats panel (3D card)
@@ -168,6 +175,7 @@ if st.session_state.player_created:
                 box-shadow: 0 10px 25px rgba(0,0,0,0.25);
                 max-height: 90vh;
                 overflow-y: auto;
+                margin-bottom: 25px;
             '>
             <h3>🏆 Player Stats</h3>
             <b>Rounds Played:</b> {player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}<br>
@@ -178,18 +186,27 @@ if st.session_state.player_created:
             <b>Monthly Income:</b> {format_currency(player['income'])}<br>
             <b>Well-being:</b> {player['emotion']} ❤️<br>
             <b>Energy:</b> {player['time']} ⚡<br>
-            <hr style='margin:10px 0;'>
-            <h4>💰 Budget Allocation</h4>
-            <div style='display:flex; gap:10px; flex-wrap:wrap;'>
-                Needs: {st.number_input("Needs", min_value=0, step=50, value=player['allocation']['needs'], key="needs")}<br>
-                Wants: {st.number_input("Wants", min_value=0, step=50, value=player['allocation']['wants'], key="wants")}<br>
-                Savings: {st.number_input("Savings", min_value=0, step=50, value=player['allocation']['savings'], key="save_alloc")}<br>
-            </div>
-            <button style='margin-top:10px; background:#4CAF50; color:white; border:none; padding:8px 15px; border-radius:8px;'>Save</button>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
+        # -------------------------------
+        # Budget allocation BELOW the 3D card
+        # -------------------------------
+        st.subheader("💰 Adjust Budget Allocation")
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            new_needs = st.number_input("Needs", min_value=0, step=50, value=player["allocation"]["needs"], key="needs_adj")
+        with col_b:
+            new_wants = st.number_input("Wants", min_value=0, step=50, value=player["allocation"]["wants"], key="wants_adj")
+        with col_c:
+            new_savings = st.number_input("Savings", min_value=0, step=50, value=player["allocation"]["savings"], key="save_adj")
+
+        if st.button("💾 Save"):
+            player["allocation"] = {"needs": new_needs, "wants": new_wants, "savings": new_savings}
+            st.session_state.players[st.session_state.current_player] = player
+            st.success("Budget allocation updated!")
 
     # -------------------------------
     # Decision log
