@@ -192,19 +192,12 @@ if st.session_state.player_created:
         st.subheader(f"{player.get('name','Unnamed')} (Team: {player.get('team','-')})")
 
         rounds_played = int(player.get("rounds_played", 0))
-        total_rounds = st.session_state.facilitator_settings.get("rounds", DEFAULT_FACILITATOR_SETTINGS["rounds"])
+        total_rounds = st.session_state.facilitator_settings.get("rounds", 10)
         progress = rounds_played / total_rounds if total_rounds else 0
         st.progress(progress)
         st.markdown(f"**Rounds Played:** {rounds_played}/{total_rounds}")
 
-        income_val = player.get("income", st.session_state.facilitator_settings.get("income", DEFAULT_FACILITATOR_SETTINGS["income"]))
-        fixed_val = st.session_state.facilitator_settings.get("fixed_costs", DEFAULT_FACILITATOR_SETTINGS["fixed_costs"])
-        available = income_val - fixed_val
-
-        if player.get("wants_balance", 0) == 0 and player.get("savings_balance", 0) == 0 and rounds_played < total_rounds:
-            player = init_round_buckets(player)
-            st.session_state.players[st.session_state.current_player] = player
-
+        # Draw Life Card
         st.markdown("### 🎴 Draw Life Card")
         if st.button("Draw Life Card"):
             st.session_state.current_card = random.choice(cards)
@@ -219,6 +212,10 @@ if st.session_state.player_created:
                 selected_option = card["options"][selected_index]
                 selected_option["card_title"] = card.get("title", "")
 
+                if player.get("wants_balance", 0) == 0 and player.get("savings_balance", 0) == 0 and rounds_played < total_rounds:
+                    player = init_round_buckets(player)
+                    st.session_state.players[st.session_state.current_player] = player
+
                 st.markdown(f"**Per-round buckets — Wants:** {format_currency(player.get('wants_balance',0))} • **Savings bucket:** {format_currency(player.get('savings_balance',0))}")
 
                 if st.button("✅ Submit Decision"):
@@ -227,22 +224,50 @@ if st.session_state.player_created:
                         st.warning(msg)
                     else:
                         player = apply_option_and_settle(player, selected_option)
-                        player["rounds_played"] = player.get("rounds_played",0)+1
+                        player["rounds_played"] += 1
                         st.session_state.current_card = None
                         st.session_state.players[st.session_state.current_player] = player
                         st.success("Decision applied and round settled.")
                         st.rerun()
 
+        # -------------------------------
+        # Adjust budget inputs
+        # -------------------------------
+        st.markdown("## Adjust Budget")
+        st.markdown("_Use the fields below to allocate your monthly budget. Must sum to available income after fixed costs._")
+        col_a, col_b, col_c = st.columns([1,1,0.5])
+        fs = st.session_state.facilitator_settings
+        available = player.get("income", 0) - fs.get("fixed_costs", 0)
+        with col_a:
+            new_wants = st.number_input("Wants", min_value=0, step=50, value=player["allocation"].get("wants",0), key="wants_adj")
+        with col_b:
+            new_savings = st.number_input("Savings", min_value=0, step=50, value=player["allocation"].get("savings",0), key="save_adj")
+        with col_c:
+            if st.button("💾 Save"):
+                ok, msg = validate_allocation_total(player.get("income",0), fs.get("fixed_costs",0), new_wants, new_savings)
+                if not ok:
+                    st.warning(msg)
+                else:
+                    player["allocation"]["wants"] = new_wants
+                    player["allocation"]["savings"] = new_savings
+                    if player.get("wants_balance",0)==0 and player.get("savings_balance",0)==0:
+                        player = init_round_buckets(player)
+                    st.session_state.players[st.session_state.current_player] = player
+                    st.success("Budget allocation updated!")
+
+        # -------------------------------
+        # Decision Log (moved below Adjust Budget)
+        # -------------------------------
         if player.get("decision_log"):
             st.subheader("Decision Log 📝")
             for log in player.get("decision_log", []):
                 st.markdown(f"- **{log.get('card','')}** → {log.get('choice','')}")
 
+    # -------------------------------
+    # Stats panel
+    # -------------------------------
     with stats_col:
-        fs_goal = st.session_state.facilitator_settings.get("goal", DEFAULT_FACILITATOR_SETTINGS["goal"])
-        allocation = player.get("allocation", {"needs": fixed_val, "wants": 0, "savings": 0})
-        wants_bal = player.get("wants_balance", 0)
-        savings_bal = player.get("savings_balance", 0)
+        fs_goal = fs.get("goal", 5000)
         st.markdown(
             f"""
             <div style='
@@ -259,33 +284,11 @@ if st.session_state.player_created:
             <b>Description:</b> {player.get('savings_goal_desc','')}<br><br>
             <b>Current Savings:</b> {format_currency(player.get('savings',0))} ({int((player.get('savings',0)/max(1,fs_goal))*100)}%)<br>
             <progress value="{player.get('savings',0)}" max="{fs_goal}" style="width:100%"></progress><br>
-            <b>Monthly Income:</b> {format_currency(player.get('income', income_val))}<br>
-            <b>Fixed monthly costs / needs:</b> {format_currency(allocation.get('needs', fixed_val))}<br>
-            <b>Per-round Wants balance:</b> {format_currency(wants_bal)}<br>
-            <b>Per-round Savings bucket:</b> {format_currency(savings_bal)}<br>
+            <b>Monthly Income:</b> {format_currency(player.get('income',0))}<br>
+            <b>Fixed monthly costs / needs:</b> {format_currency(player['allocation'].get('needs', fs.get('fixed_costs',0)))}<br>
             <b>Well-being:</b> {player.get('emotion',5)} ❤️<br>
             <b>Energy:</b> {player.get('time',5)} ⚡<br>
             </div>
             """,
             unsafe_allow_html=True,
         )
-
-        # Adjust budget
-        st.markdown("## Adjust budget")
-        col_a, col_b, col_c = st.columns([1,1,0.5])
-        with col_a:
-            new_wants = st.number_input("Wants", min_value=0, step=50, value=allocation.get("wants",0), key="wants_adj")
-        with col_b:
-            new_savings = st.number_input("Savings", min_value=0, step=50, value=allocation.get("savings",0), key="save_adj")
-        with col_c:
-            if st.button("💾 Save"):
-                ok, msg = validate_allocation_total(player.get("income", income_val), allocation.get("needs", fixed_val), new_wants, new_savings)
-                if not ok:
-                    st.warning(msg)
-                else:
-                    player["allocation"]["wants"] = new_wants
-                    player["allocation"]["savings"] = new_savings
-                    if player.get("wants_balance",0)==0 and player.get("savings_balance",0)==0:
-                        player = init_round_buckets(player)
-                    st.session_state.players[st.session_state.current_player] = player
-                    st.success("Budget allocation updated!")
