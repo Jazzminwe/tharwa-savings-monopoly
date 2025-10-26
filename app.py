@@ -2,9 +2,17 @@ import streamlit as st
 import random
 import json
 
-# --------------------------------
+# -------------------------------
+# Page config
+# -------------------------------
+st.set_page_config(
+    page_title="Tharwa Savings Game",
+    layout="wide",
+)
+
+# -------------------------------
 # Initialize session state
-# --------------------------------
+# -------------------------------
 if "players" not in st.session_state:
     st.session_state.players = []
 
@@ -14,32 +22,28 @@ if "current_player" not in st.session_state:
 if "current_card" not in st.session_state:
     st.session_state.current_card = None
 
-if "decision_log" not in st.session_state:
-    st.session_state.decision_log = []
-
 if "facilitator_settings" not in st.session_state:
     st.session_state.facilitator_settings = {
         "goal": 5000,
-        "monthly_income": 2000,
-        "rounds": 10
+        "income": 2000,
+        "rounds": 6,
     }
 
 if "pending_rerun" not in st.session_state:
     st.session_state.pending_rerun = False
 
-# --------------------------------
-# Load cards
-# --------------------------------
-try:
-    with open("data/life_cards.json", "r") as f:
-        cards = json.load(f)
-except FileNotFoundError:
-    st.error("Cards file not found! Please ensure 'data/life_cards.json' exists.")
-    st.stop()
+if "decision_log" not in st.session_state:
+    st.session_state.decision_log = []
 
-# --------------------------------
+# -------------------------------
+# Load cards
+# -------------------------------
+with open("data/life_cards.json", "r") as f:
+    cards = json.load(f)
+
+# -------------------------------
 # Helper functions
-# --------------------------------
+# -------------------------------
 def apply_effects(player, option):
     player["savings"] += option.get("money", 0)
     player["emotion"] += option.get("wellbeing", 0)
@@ -57,162 +61,166 @@ def is_valid_option(player, option):
     return True, ""
 
 def format_option_text(opt):
-    return f"{opt['text']} → 💰 {opt['money']:,} SAR, 😊 {opt['wellbeing']}, ⚡ {opt['time']}"
+    return f"{opt['text']} → Money: {opt['money']}, Wellbeing: {opt['wellbeing']}, Time: {opt['time']}"
 
-def currency_fmt(val):
-    return f"{val:,} SAR"
+def format_currency(amount):
+    return f"SAR {amount:,.0f}"
 
-# --------------------------------
-# Facilitator setup
-# --------------------------------
+# -------------------------------
+# Facilitator Setup
+# -------------------------------
 st.sidebar.header("Facilitator Setup")
 goal = st.sidebar.number_input(
-    "Savings goal per player", value=st.session_state.facilitator_settings["goal"], step=50
+    "Savings goal (SAR)", 
+    value=st.session_state.facilitator_settings["goal"], 
+    step=50
 )
-monthly_income = st.sidebar.number_input(
-    "Monthly income", value=st.session_state.facilitator_settings["monthly_income"], step=50
+income = st.sidebar.number_input(
+    "Monthly income (SAR)", 
+    value=st.session_state.facilitator_settings["income"], 
+    step=50
 )
 rounds = st.sidebar.number_input(
-    "Number of rounds", value=st.session_state.facilitator_settings.get("rounds", 10), step=1
+    "Number of rounds", 
+    value=st.session_state.facilitator_settings["rounds"], 
+    step=1, 
+    min_value=1
 )
 
-st.session_state.facilitator_settings.update({
+st.session_state.facilitator_settings = {
     "goal": goal,
-    "monthly_income": monthly_income,
-    "rounds": rounds
-})
+    "income": income,
+    "rounds": rounds,
+}
 
-# --------------------------------
-# Player setup
-# --------------------------------
-st.header("Players")
+# -------------------------------
+# Player Setup
+# -------------------------------
+st.header("Create Player")
 team_name = st.text_input("Team Name")
 player_name = st.text_input("Player Name")
 savings_goal_desc = st.text_input("Savings Goal Description")
-needs_init = st.number_input("Needs allocation", min_value=0, step=50, value=monthly_income//2)
-wants_init = st.number_input("Wants allocation", min_value=0, step=50, value=monthly_income//4)
-savings_init = st.number_input("Monthly savings", min_value=0, step=50, value=monthly_income - needs_init - wants_init)
+initial_needs = st.number_input("Needs allocation (SAR)", step=50, value=goal//3)
+initial_wants = st.number_input("Wants allocation (SAR)", step=50, value=goal//6)
+initial_savings = st.number_input("Savings allocation (SAR)", step=50, value=goal//6)
 
-total_alloc = needs_init + wants_init + savings_init
-if total_alloc != monthly_income:
-    st.warning(f"Total allocation ({total_alloc:,} SAR) must equal monthly income ({monthly_income:,} SAR)")
-
-if st.button("Create Player") and player_name and team_name and total_alloc == monthly_income:
+if st.button("Create Player") and player_name:
     st.session_state.players.append({
-        "team_name": team_name,
+        "team": team_name,
         "name": player_name,
         "savings_goal_desc": savings_goal_desc,
-        "savings_goal": goal,
+        "savings_goal_amount": goal,
         "savings": 0,
-        "monthly_income": monthly_income,
-        "allocation": {"needs": needs_init, "wants": wants_init, "savings": savings_init},
         "emotion": 5,
         "time": 5,
-        "rounds_played": 0
+        "income": income,
+        "allocation": {"needs": initial_needs, "wants": initial_wants, "savings": initial_savings},
+        "rounds_played": 0,
     })
-    st.success(f"Player {player_name} created! You can start the game.")
+    # redirect to player page by setting a flag
     st.session_state.pending_rerun = True
 
-# --------------------------------
-# Game logic
-# --------------------------------
+# -------------------------------
+# Game Logic
+# -------------------------------
 if st.session_state.players:
     player = st.session_state.players[st.session_state.current_player]
 
-    # Add horizontal spacing between game area and player stats
-    col1, col2 = st.columns([2, 1], gap="large")
-    with col1:
-        st.subheader(f"Current Player: {player['name']} (Team: {player['team_name']})")
+    # Layout: left column for game, right column for stats
+    game_col, stats_col = st.columns([2, 1], gap="large")
 
-        # Draw Card
-        if st.button("Draw Card"):
+    with stats_col:
+        # Shadow card style for player stats
+        st.markdown(
+            f"""
+            <div style='
+                background-color: #fefefe;
+                padding: 20px;
+                border-radius: 15px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                min-height: 500px;
+            '>
+            <h3>Player Stats 🏆</h3>
+            <b>Name:</b> {player['name']} <br>
+            <b>Team:</b> {player['team']} <br>
+            <b>Savings Goal:</b> {player['savings_goal_desc']} ({format_currency(player['savings_goal_amount'])})<br>
+            <b>Savings Progress:</b> {format_currency(player['savings'])} 
+            ({int(player['savings']/player['savings_goal_amount']*100)}%)
+            <progress value="{player['savings']}" max="{player['savings_goal_amount']}" style="width:100%"></progress><br>
+            <b>Monthly Income:</b> {format_currency(player['income'])}<br>
+            <b>Budget Allocation (SAR):</b><br>
+            """, unsafe_allow_html=True
+        )
+
+        # Budget allocation inputs in a single row
+        needs, wants, savings_alloc = st.columns(3)
+        with needs:
+            new_needs = st.number_input("Needs", step=50, value=player["allocation"]["needs"], key="needs_input")
+        with wants:
+            new_wants = st.number_input("Wants", step=50, value=player["allocation"]["wants"], key="wants_input")
+        with savings_alloc:
+            new_savings = st.number_input("Savings", step=50, value=player["allocation"]["savings"], key="savings_input")
+
+        if st.button("Save", key="save_alloc"):
+            total = new_needs + new_wants + new_savings
+            if total != player["income"]:
+                st.warning(f"Total allocation ({total}) must equal income ({player['income']})")
+            else:
+                player["allocation"] = {"needs": new_needs, "wants": new_wants, "savings": new_savings}
+                st.success("Allocation saved!")
+                st.session_state.pending_rerun = True
+
+        st.markdown(
+            f"""
+            <b>Well-being:</b> {player['emotion']} 💖<br>
+            <b>Energy:</b> {player['time']} ⚡<br>
+            <b>Rounds Played:</b> {player['rounds_played']} / {st.session_state.facilitator_settings['rounds']}<br>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with game_col:
+        st.subheader("Draw a Life Card")
+        if st.button("Draw Card", key="draw_card"):
             st.session_state.current_card = random.choice(cards)
             st.session_state.pending_rerun = True
 
         card = st.session_state.current_card
         if card:
-            st.markdown(f"### Card: {card['title']}")
+            st.markdown(f"**Card:** {card['title']}")
             option_choice = st.radio(
                 "Choose an option",
                 [format_option_text(opt) for opt in card["options"]],
                 key=f"choice_{player['name']}"
             )
             selected_option = card["options"][[format_option_text(opt) for opt in card["options"]].index(option_choice)]
-
-            if st.button("Submit Decision"):
+            if st.button("Submit Decision", key="submit_option"):
                 valid, msg = is_valid_option(player, selected_option)
                 if not valid:
                     st.warning(msg)
                 else:
-                    apply_effects(player, selected_option)
+                    player = apply_effects(player, selected_option)
+                    st.success("Decision applied!")
                     st.session_state.decision_log.append({
-                        "player": player['name'],
-                        "team": player['team_name'],
-                        "decision": selected_option['text'],
-                        "money": selected_option['money'],
-                        "wellbeing": selected_option['wellbeing'],
-                        "time": selected_option['time']
+                        "player": player["name"],
+                        "card": card["title"],
+                        "choice": option_choice,
                     })
                     st.session_state.current_card = None
                     st.session_state.pending_rerun = True
 
-    with col2:
-        # Player stats panel (shadow card)
-        st.markdown(
-            f"""
-            <div style="
-                padding:20px; 
-                border-radius:15px; 
-                box-shadow: 2px 4px 25px rgba(0,0,0,0.3); 
-                background-color:#fdfdfd;
-                min-height:450px;
-                overflow:auto;
-            ">
-            <h4>📝 Player Stats</h4>
-            <p><strong>Rounds left:</strong> {st.session_state.facilitator_settings['rounds'] - player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}</p>
+    # -------------------------------
+    # Decision Log
+    # -------------------------------
+    if st.session_state.decision_log:
+        st.subheader("Decision Log 📝")
+        for log in st.session_state.decision_log:
+            st.write(f"{log['player']} chose '{log['choice']}' on '{log['card']}'")
 
-            <h4>💰 Savings</h4>
-            <p>{currency_fmt(player['savings'])} / {currency_fmt(player['savings_goal'])} ({player['savings']/player['savings_goal']*100:.1f}%)</p>
-            <progress value="{player['savings']}" max="{player['savings_goal']}" style="width:100%"></progress>
-            <p>Goal: {player.get('savings_goal_desc','')}</p>
-
-            <h4>🏦 Monthly Income</h4>
-            <p>{currency_fmt(player['monthly_income'])}</p>
-
-            <h4>📊 Budget Allocation (Next Round)</h4>
-            </div>
-            """, unsafe_allow_html=True
-        )
-
-        # Budget inputs in a single row
-        col_needs, col_wants, col_savings, col_save_btn = st.columns([1,1,1,1])
-        needs_new = col_needs.number_input("Needs", min_value=0, step=50, value=player['allocation']['needs'], key=f"needs_{player['name']}")
-        wants_new = col_wants.number_input("Wants", min_value=0, step=50, value=player['allocation']['wants'], key=f"wants_{player['name']}")
-        savings_new = col_savings.number_input("Savings", min_value=0, step=50, value=player['allocation']['savings'], key=f"savings_{player['name']}")
-        if col_save_btn.button("Save"):
-            total = needs_new + wants_new + savings_new
-            if total != player['monthly_income']:
-                st.warning(f"Allocation must sum to {currency_fmt(player['monthly_income'])}")
-            else:
-                player['allocation'] = {"needs": needs_new, "wants": wants_new, "savings": savings_new}
-                st.success("Saved!")
-                st.session_state.pending_rerun = True
-
-        st.markdown(f"😊 Well-being: {player['emotion']}/10")
-        st.markdown(f"⚡ Energy/Time: {player['time']}/10")
-
-# --------------------------------
-# Decision log
-# --------------------------------
-if st.session_state.decision_log:
-    st.markdown("---")
-    st.subheader("Decision Log")
-    for idx, d in enumerate(st.session_state.decision_log, 1):
-        st.markdown(f"{idx}. {d['player']} ({d['team']}): {d['decision']} → 💰 {d['money']:,} SAR, 😊 {d['wellbeing']}, ⚡ {d['time']}")
-
-# --------------------------------
-# Safe rerun at end
-# --------------------------------
+# -------------------------------
+# Safe rerun at end of script
+# -------------------------------
 if st.session_state.pending_rerun:
     st.session_state.pending_rerun = False
     st.experimental_rerun()
