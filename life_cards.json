@@ -1,0 +1,88 @@
+[
+    {
+      "type": "Negative",
+      "title": "Your electricity bill was higher by SAR 300",
+      "options": [
+        {"text": "Use savings", "money": -300, "wellbeing": 0, "time": 0},
+        {"text": "Use emergency fund", "money": -300, "wellbeing": 0, "time": 0},
+        {"text": "Reduce spending elsewhere", "money": -300, "wellbeing": 0, "time": 0}
+      ]
+    },
+    {
+      "type": "Negative",
+      "title": "You lost your part-time shift this week — SAR 500 less income",
+      "options": [
+        {"text": "Reduce spending", "money": -500, "wellbeing": 0, "time": 0},
+        {"text": "Delay your goal", "money": 0, "wellbeing": 0, "time": 0},
+        {"text": "Earn extra elsewhere", "money": 500, "wellbeing": 0, "time": -1}
+      ]
+    },
+    {
+      "type": "Negative",
+      "title": "You're feeling exhausted. You need a break day",
+      "options": [
+        {"text": "Take a break", "money": -300, "wellbeing": 1, "time": 1},
+        {"text": "Push through", "money": 0, "wellbeing": 0, "time": 0}
+      ]
+    },
+    {
+      "type": "Positive",
+      "title": "You received a SAR 500 bonus this month",
+      "options": [
+        {"text": "Add to savings", "money": 500, "wellbeing": 0, "time": 0},
+        {"text": "Add to emergency fund", "money": 500, "wellbeing": 0, "time": 0},
+        {"text": "Enjoy something", "money": 0, "wellbeing": 1, "time": 0}
+      ]
+    },
+    {
+      "type": "Positive",
+      "title": "You found SAR 100 in an old wallet",
+      "options": [
+        {"text": "Save it", "money": 100, "wellbeing": 0, "time": 0},
+        {"text": "Spend it", "money": -100, "wellbeing": 1, "time": 0},
+        {"text": "Split", "money": 50, "wellbeing": 0, "time": 0}
+      ]
+    },
+    {
+      "type": "Neutral",
+      "title": "You're invited to a last-minute weekend trip (SAR 700)",
+      "options": [
+        {"text": "Join", "money": -700, "wellbeing": 1, "time": -1},
+        {"text": "Skip", "money": 0, "wellbeing": 0, "time": 0}
+      ]
+    },
+    {
+      "type": "Neutral",
+      "title": "You have a free evening. Freelance for SAR 300 or rest at home?",
+      "options": [
+        {"text": "Freelance", "money": 300, "wellbeing": 0, "time": -1},
+        {"text": "Rest", "money": 0, "wellbeing": 0, "time": 1}
+      ]
+    },
+    {
+      "type": "Neutral",
+      "title": "Flash sale! Your dream shoes are now SAR 650",
+      "options": [
+        {"text": "Buy them", "money": -650, "wellbeing": 1, "time": 0},
+        {"text": "Skip", "money": 0, "wellbeing": 0, "time": 0}
+      ]
+    },
+    {
+      "type": "Neutral",
+      "title": "A personal development course is available for SAR 1,000",
+      "options": [
+        {"text": "Enroll", "money": -1000, "wellbeing": 0, "time": 1},
+        {"text": "Delay", "money": 0, "wellbeing": 0, "time": 0}
+      ]
+    },
+    {
+      "type": "Positive",
+      "title": "A friend covered your coffee and lunch today — you saved SAR 60",
+      "options": [
+        {"text": "Use for fun", "money": -60, "wellbeing": 1, "time": 0},
+        {"text": "Save it", "money": 60, "wellbeing": 0, "time": 0},
+        {"text": "Emotional boost", "money": 0, "wellbeing": 1, "time": 0}
+      ]
+    }
+  ]
+  
