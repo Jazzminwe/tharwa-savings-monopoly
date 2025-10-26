@@ -20,7 +20,10 @@ if "facilitator_settings" not in st.session_state:
 if "rerun_flag" not in st.session_state:
     st.session_state.rerun_flag = False
 
-# Handle safe rerun
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "setup"
+
+# Safe rerun
 if st.session_state.rerun_flag:
     st.session_state.rerun_flag = False
     st.experimental_rerun()
@@ -54,23 +57,31 @@ def is_valid_option(player, option):
     return True, ""
 
 def format_option_text(opt):
-    return f"{opt['text']} → Money: {opt['money']:,}, Wellbeing: {opt['wellbeing']}, Time: {opt['time']}"
+    return f"{opt['text']} → SAR {opt['money']:,}, Wellbeing: {opt['wellbeing']}, Time: {opt['time']}"
 
 def format_currency(value):
-    return f"{value:,}"
+    return f"SAR {value:,}"
+
+def color_bar(value):
+    if value < 3:
+        return "🔴"
+    elif value < 7:
+        return "🟡"
+    else:
+        return "🟢"
 
 # --------------------------------
 # Facilitator setup
 # --------------------------------
 st.sidebar.header("Facilitator Setup")
 income = st.sidebar.number_input(
-    "Monthly income for all players", 
+    "Monthly income for all players (SAR)", 
     value=st.session_state.facilitator_settings["income"],
     step=50,
     format="%d"
 )
 goal = st.sidebar.number_input(
-    "Savings goal for all players", 
+    "Savings goal for all players (SAR)", 
     value=st.session_state.facilitator_settings["goal"],
     step=50,
     format="%d"
@@ -85,45 +96,42 @@ rounds = st.sidebar.number_input(
 st.session_state.facilitator_settings = {"goal": goal, "income": income, "rounds": rounds}
 
 # --------------------------------
-# Player setup
+# Page navigation
 # --------------------------------
-st.header("Players Setup")
-with st.expander("Add New Player"):
-    team_name = st.text_input("Team Name")
-    player_name = st.text_input("Player Name")
-    player_income = st.number_input(
-        "Monthly Income", 
-        value=income, 
-        step=50, 
-        format="%d"
-    )
-    needs = st.number_input("Needs allocation", value=int(player_income*0.5), step=50, format="%d")
-    wants = st.number_input("Wants allocation", value=int(player_income*0.25), step=50, format="%d")
-    savings_alloc = st.number_input("Savings allocation", value=int(player_income*0.25), step=50, format="%d")
-    savings_goal_desc = st.text_input("Savings Goal Description", placeholder="E.g., buy a car, emergency fund...")
+if st.session_state.current_page == "setup":
+    st.header("Players Setup")
+    with st.expander("Add New Player"):
+        team_name = st.text_input("Team Name")
+        player_name = st.text_input("Player Name")
+        needs = st.number_input("Needs allocation", value=int(income*0.5), step=50, format="%d")
+        wants = st.number_input("Wants allocation", value=int(income*0.25), step=50, format="%d")
+        savings_alloc = st.number_input("Savings allocation", value=int(income*0.25), step=50, format="%d")
+        savings_goal_desc = st.text_input("Savings Goal Description", placeholder="E.g., buy a car, emergency fund...")
 
-    total_alloc = needs + wants + savings_alloc
-    if total_alloc != player_income:
-        st.warning(f"Allocation must sum to monthly income ({player_income:,}). Current total: {total_alloc:,}")
+        total_alloc = needs + wants + savings_alloc
+        if total_alloc != income:
+            st.warning(f"Allocation must sum to monthly income ({income:,}). Current total: {total_alloc:,}")
 
-    if st.button("Add Player") and player_name and team_name and total_alloc == player_income:
-        st.session_state.players.append({
-            "team": team_name,
-            "name": player_name,
-            "savings": savings_alloc,
-            "emotion": 5,
-            "time": 5,
-            "income": player_income,
-            "allocation": {"needs": needs, "wants": wants, "savings": savings_alloc},
-            "savings_goal_desc": savings_goal_desc,
-            "round": 0
-        })
-        st.success(f"Player {player_name} added!")
+        if st.button("Create Player") and player_name and team_name and total_alloc == income:
+            st.session_state.players.append({
+                "team": team_name,
+                "name": player_name,
+                "savings": savings_alloc,
+                "emotion": 5,
+                "time": 5,
+                "income": income,
+                "allocation": {"needs": needs, "wants": wants, "savings": savings_alloc},
+                "savings_goal_desc": savings_goal_desc,
+                "round": 0
+            })
+            st.success(f"Player {player_name} created! Redirecting to game...")
+            st.session_state.current_page = "game"
+            st.session_state.rerun_flag = True
 
 # --------------------------------
 # Game logic
 # --------------------------------
-if st.session_state.players:
+if st.session_state.current_page == "game" and st.session_state.players:
     player = st.session_state.players[st.session_state.current_player]
     st.subheader(f"Current Player: {player['name']} ({player['team']})")
 
@@ -151,19 +159,18 @@ if st.session_state.players:
                     st.warning(msg)
                 else:
                     st.session_state.players[st.session_state.current_player] = apply_effects(player, selected_option)
-                    st.session_state.current_card = None  # Reset card
+                    st.session_state.current_card = None
                     st.session_state.players[st.session_state.current_player]["round"] += 1
-                    # Move to next player
+                    # Next player
                     st.session_state.current_player = (st.session_state.current_player + 1) % len(st.session_state.players)
                     st.session_state.rerun_flag = True
 
     with right_col:
         st.markdown("### Player Status")
         st.markdown(f"**Savings Goal:** {player['savings_goal_desc']}")
-        st.markdown(f"**Savings:** ${format_currency(player['savings'])}")
+        st.markdown(f"**Savings:** {format_currency(player['savings'])} {color_bar(player['savings']/goal*10)}")
         st.progress(min(player['savings']/goal,1.0))
-        st.markdown(f"**Well-being:** {player['emotion']}/10")
-        st.markdown(f"**Energy:** {player['time']}/10")
-        st.markdown(f"**Monthly Income:** ${format_currency(player['income'])}")
+        st.markdown(f"**Well-being:** {player['emotion']}/10 {color_bar(player['emotion'])}")
+        st.markdown(f"**Energy:** {player['time']}/10 {color_bar(player['time'])}")
+        st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
         st.markdown(f"**Round:** {player['round']} / {rounds}")
-
