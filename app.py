@@ -157,37 +157,47 @@ if st.session_state.players:
                     st.session_state.pending_rerun = True
 
     with col2:
-        st.markdown("### 📝 Player Stats & Rounds")
-        st.markdown(f"**Rounds left:** {st.session_state.facilitator_settings['rounds'] - player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}")
-
-        # Visual card style with shadow
+        # -----------------------------
+        # Player stats panel (shadow card)
+        # -----------------------------
         st.markdown(
             f"""
-            <div style="padding:20px; border-radius:15px; box-shadow: 2px 4px 20px rgba(0,0,0,0.3); background-color:#fdfdfd">
+            <div style="
+                padding:20px; 
+                border-radius:15px; 
+                box-shadow: 2px 4px 20px rgba(0,0,0,0.3); 
+                background-color:#fdfdfd;
+            ">
+            <h4>📝 Player Stats</h4>
+            <p><strong>Rounds left:</strong> {st.session_state.facilitator_settings['rounds'] - player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}</p>
+
             <h4>💰 Savings</h4>
             <p>{currency_fmt(player['savings'])} / {currency_fmt(player['savings_goal'])} ({player['savings']/player['savings_goal']*100:.1f}%)</p>
             <progress value="{player['savings']}" max="{player['savings_goal']}" style="width:100%"></progress>
-            <p>Goal Description: {player.get('savings_goal_desc','')}</p>
+            <p>Goal: {player.get('savings_goal_desc','')}</p>
 
             <h4>🏦 Monthly Income</h4>
             <p>{currency_fmt(player['monthly_income'])}</p>
 
-            <h4>📊 Budget Allocation (for next round)</h4>
+            <h4>📊 Budget Allocation (Next Round)</h4>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            </div>
             </div>
             """, unsafe_allow_html=True
         )
 
-        needs_new = st.number_input("Needs", min_value=0, step=50, value=player['allocation']['needs'], key=f"needs_{player['name']}")
-        wants_new = st.number_input("Wants", min_value=0, step=50, value=player['allocation']['wants'], key=f"wants_{player['name']}")
-        savings_new = st.number_input("Savings", min_value=0, step=50, value=player['allocation']['savings'], key=f"savings_{player['name']}")
-
-        if st.button("Save Allocation"):
+        # Budget inputs in a single row
+        col_needs, col_wants, col_savings, col_save_btn = st.columns([1,1,1,1])
+        needs_new = col_needs.number_input("Needs", min_value=0, step=50, value=player['allocation']['needs'], key=f"needs_{player['name']}")
+        wants_new = col_wants.number_input("Wants", min_value=0, step=50, value=player['allocation']['wants'], key=f"wants_{player['name']}")
+        savings_new = col_savings.number_input("Savings", min_value=0, step=50, value=player['allocation']['savings'], key=f"savings_{player['name']}")
+        if col_save_btn.button("Save"):
             total = needs_new + wants_new + savings_new
             if total != player['monthly_income']:
                 st.warning(f"Allocation must sum to {currency_fmt(player['monthly_income'])}")
             else:
                 player['allocation'] = {"needs": needs_new, "wants": wants_new, "savings": savings_new}
-                st.success("Allocation saved for next round!")
+                st.success("Saved!")
                 st.session_state.pending_rerun = True
 
         st.markdown(f"😊 Well-being: {player['emotion']}/10")
