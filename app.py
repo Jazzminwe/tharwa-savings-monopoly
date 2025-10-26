@@ -13,7 +13,7 @@ DEFAULT_FACILITATOR_SETTINGS = {
 }
 
 # -------------------------------
-# Ensure facilitator settings exist and are normalized
+# Ensure facilitator settings exist
 # -------------------------------
 if "facilitator_settings" not in st.session_state:
     st.session_state.facilitator_settings = DEFAULT_FACILITATOR_SETTINGS.copy()
@@ -23,7 +23,7 @@ else:
             st.session_state.facilitator_settings[k] = v
 
 # -------------------------------
-# Initialize session state for players, indexes and card
+# Initialize session state
 # -------------------------------
 if "players" not in st.session_state:
     st.session_state.players = []
@@ -186,7 +186,7 @@ if not st.session_state.player_created:
 # -------------------------------
 if st.session_state.player_created:
     player = st.session_state.players[st.session_state.current_player]
-    game_col, stats_col = st.columns([1.6, 1], gap="large")
+    game_col, stats_col = st.columns([1.5, 1.5], gap="large")  # wider right panel
 
     with game_col:
         st.subheader(f"{player.get('name','Unnamed')} (Team: {player.get('team','-')})")
@@ -230,21 +230,57 @@ if st.session_state.player_created:
                         st.success("Decision applied and round settled.")
                         st.rerun()
 
-        # -------------------------------
-        # Adjust budget inputs
-        # -------------------------------
-        st.markdown("## Adjust Budget")
-        st.markdown("_Use the fields below to allocate your monthly budget. Must sum to available income after fixed costs._")
-        col_a, col_b, col_c = st.columns([1,1,0.5])
-        fs = st.session_state.facilitator_settings
-        available = player.get("income", 0) - fs.get("fixed_costs", 0)
-        with col_a:
-            new_wants = st.number_input("Wants", min_value=0, step=50, value=player["allocation"].get("wants",0), key="wants_adj")
-        with col_b:
-            new_savings = st.number_input("Savings", min_value=0, step=50, value=player["allocation"].get("savings",0), key="save_adj")
-        with col_c:
-            if st.button("💾 Save"):
-                ok, msg = validate_allocation_total(player.get("income",0), fs.get("fixed_costs",0), new_wants, new_savings)
+    # -------------------------------
+    # Stats panel with integrated budget allocation
+    # -------------------------------
+    with stats_col:
+        fs_goal = st.session_state.facilitator_settings.get("goal", 5000)
+        allocation = player.get("allocation", {"needs": player.get("income",0), "wants":0, "savings":0})
+        wants_val = allocation.get("wants",0)
+        savings_val = allocation.get("savings",0)
+        income_val = player.get("income",0)
+        fixed_val = allocation.get("needs", st.session_state.facilitator_settings.get("fixed_costs",0))
+        available = income_val - fixed_val
+
+        st.markdown(
+            f"""
+            <div style='
+                background-color: #fefefe;
+                padding: 20px;
+                border-radius: 20px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+                width: 100%;
+                min-width: 300px;
+                overflow-y: auto;
+                margin-bottom: 25px;
+            '>
+            <h3>🏆 Player Stats</h3>
+            <b>Savings Goal:</b> {format_currency(fs_goal)}<br>
+            <b>Description:</b> {player.get('savings_goal_desc','')}<br><br>
+            <b>Current Savings:</b> {format_currency(player.get('savings',0))} ({int((player.get('savings',0)/max(1,fs_goal))*100)}%)<br>
+            <progress value="{player.get('savings',0)}" max="{fs_goal}" style="width:100%"></progress><br>
+            <b>Monthly Income:</b> {format_currency(income_val)}<br>
+            <b>Fixed Costs / Needs:</b> {format_currency(fixed_val)}<br>
+            <b>Well-being:</b> {player.get('emotion',5)} ❤️<br>
+            <b>Energy:</b> {player.get('time',5)} ⚡<br>
+            <br>
+            <b>Budget Allocation</b> <i>Allocate monthly budget</i><br>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Inputs inside panel
+        new_wants_str = st.text_input("Wants (SAR)", value=str(wants_val), key="wants_shadow")
+        new_savings_str = st.text_input("Savings (SAR)", value=str(savings_val), key="savings_shadow")
+        if st.button("💾 Save Budget"):
+            try:
+                new_wants = int(new_wants_str.replace(",",""))
+                new_savings = int(new_savings_str.replace(",",""))
+            except ValueError:
+                st.warning("Please enter valid numbers for wants and savings.")
+            else:
+                ok, msg = validate_allocation_total(income_val, fixed_val, new_wants, new_savings)
                 if not ok:
                     st.warning(msg)
                 else:
@@ -255,40 +291,11 @@ if st.session_state.player_created:
                     st.session_state.players[st.session_state.current_player] = player
                     st.success("Budget allocation updated!")
 
-        # -------------------------------
-        # Decision Log (moved below Adjust Budget)
-        # -------------------------------
+    # -------------------------------
+    # Decision log at bottom
+    # -------------------------------
+    with game_col:
         if player.get("decision_log"):
             st.subheader("Decision Log 📝")
             for log in player.get("decision_log", []):
                 st.markdown(f"- **{log.get('card','')}** → {log.get('choice','')}")
-
-    # -------------------------------
-    # Stats panel
-    # -------------------------------
-    with stats_col:
-        fs_goal = fs.get("goal", 5000)
-        st.markdown(
-            f"""
-            <div style='
-                background-color: #fefefe;
-                padding: 20px;
-                border-radius: 20px;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-                width: 100%;
-                overflow-y: auto;
-                margin-bottom: 25px;
-            '>
-            <h3>🏆 Player Stats</h3>
-            <b>Savings Goal:</b> {format_currency(fs_goal)}<br>
-            <b>Description:</b> {player.get('savings_goal_desc','')}<br><br>
-            <b>Current Savings:</b> {format_currency(player.get('savings',0))} ({int((player.get('savings',0)/max(1,fs_goal))*100)}%)<br>
-            <progress value="{player.get('savings',0)}" max="{fs_goal}" style="width:100%"></progress><br>
-            <b>Monthly Income:</b> {format_currency(player.get('income',0))}<br>
-            <b>Fixed monthly costs / needs:</b> {format_currency(player['allocation'].get('needs', fs.get('fixed_costs',0)))}<br>
-            <b>Well-being:</b> {player.get('emotion',5)} ❤️<br>
-            <b>Energy:</b> {player.get('time',5)} ⚡<br>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
