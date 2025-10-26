@@ -1,7 +1,6 @@
 import streamlit as st
 import random
 import json
-import os
 
 # --------------------------------
 # Initialize session state
@@ -23,25 +22,10 @@ if "facilitator_settings" not in st.session_state:
     }
 
 # --------------------------------
-# Load cards safely
+# Load cards
 # --------------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-cards_file = os.path.join(BASE_DIR, "cards.json")
-
-try:
-    with open(cards_file, "r") as f:
-        cards = json.load(f)
-except FileNotFoundError:
-    st.warning("cards.json not found. Using default sample card.")
-    cards = [
-        {
-            "title": "Sample Card",
-            "options": [
-                {"text": "Do nothing", "money": 0, "wellbeing": 0, "time": 0},
-                {"text": "Save 100", "money": 100, "wellbeing": 1, "time": -1},
-            ],
-        }
-    ]
+with open("life_cards.json", "r") as f:
+    cards = json.load(f)
 
 # --------------------------------
 # Helper functions
@@ -69,19 +53,19 @@ def format_option_text(opt):
 # --------------------------------
 st.sidebar.header("Facilitator Setup")
 goal = st.sidebar.number_input(
-    "Savings goal", value=st.session_state.facilitator_settings["goal"]
+    "Savings goal", value=st.session_state.facilitator_settings["goal"], min_value=0
 )
 income = st.sidebar.number_input(
-    "Monthly income", value=st.session_state.facilitator_settings["income"]
+    "Monthly income", value=st.session_state.facilitator_settings["income"], min_value=0
 )
 needs = st.sidebar.number_input(
-    "Needs allocation", value=st.session_state.facilitator_settings["allocation"]["needs"]
+    "Needs allocation", value=st.session_state.facilitator_settings["allocation"]["needs"], min_value=0
 )
 wants = st.sidebar.number_input(
-    "Wants allocation", value=st.session_state.facilitator_settings["allocation"]["wants"]
+    "Wants allocation", value=st.session_state.facilitator_settings["allocation"]["wants"], min_value=0
 )
 savings_alloc = st.sidebar.number_input(
-    "Savings allocation", value=st.session_state.facilitator_settings["allocation"]["savings"]
+    "Savings allocation", value=st.session_state.facilitator_settings["allocation"]["savings"], min_value=0
 )
 
 total_alloc = needs + wants + savings_alloc
@@ -89,7 +73,6 @@ if total_alloc != income:
     st.sidebar.error(f"Total allocation (needs+wants+savings={total_alloc}) must equal income ({income})")
     st.stop()
 
-# Save facilitator settings
 st.session_state.facilitator_settings = {
     "goal": goal,
     "income": income,
@@ -132,7 +115,6 @@ if st.session_state.players:
             [format_option_text(opt) for opt in card["options"]],
             key=f"choice_{player['name']}"
         )
-        # Map back to the option dict
         selected_option = card["options"][[format_option_text(opt) for opt in card["options"]].index(option_choice)]
 
         if st.button("Submit Option"):
@@ -145,6 +127,4 @@ if st.session_state.players:
                 st.session_state.current_card = None  # Reset card
                 st.experimental_rerun()  # Refresh to next player
 
-    st.markdown(
-        f"**Savings:** {player['savings']}, **Well-being:** {player['emotion']}, **Energy:** {player['time']}"
-    )
+    st.markdown(f"**Savings:** {player['savings']}, **Well-being:** {player['emotion']}, **Energy:** {player['time']}")
