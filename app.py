@@ -24,7 +24,7 @@ if "facilitator_settings" not in st.session_state:
 # --------------------------------
 # Load cards
 # --------------------------------
-with open("life_cards.json", "r") as f:
+with open("data/life_cards.json", "r") as f:
     cards = json.load(f)
 
 # --------------------------------
@@ -52,27 +52,42 @@ def format_option_text(opt):
 # Facilitator setup
 # --------------------------------
 st.sidebar.header("Facilitator Setup")
+
+# Add input verification: only allow non-negative numbers
 goal = st.sidebar.number_input(
-    "Savings goal", value=st.session_state.facilitator_settings["goal"], min_value=0
+    "Savings goal",
+    value=st.session_state.facilitator_settings["goal"],
+    min_value=0
 )
 income = st.sidebar.number_input(
-    "Monthly income", value=st.session_state.facilitator_settings["income"], min_value=0
+    "Monthly income",
+    value=st.session_state.facilitator_settings["income"],
+    min_value=0
 )
 needs = st.sidebar.number_input(
-    "Needs allocation", value=st.session_state.facilitator_settings["allocation"]["needs"], min_value=0
+    "Needs allocation",
+    value=st.session_state.facilitator_settings["allocation"]["needs"],
+    min_value=0
 )
 wants = st.sidebar.number_input(
-    "Wants allocation", value=st.session_state.facilitator_settings["allocation"]["wants"], min_value=0
+    "Wants allocation",
+    value=st.session_state.facilitator_settings["allocation"]["wants"],
+    min_value=0
 )
 savings_alloc = st.sidebar.number_input(
-    "Savings allocation", value=st.session_state.facilitator_settings["allocation"]["savings"], min_value=0
+    "Savings allocation",
+    value=st.session_state.facilitator_settings["allocation"]["savings"],
+    min_value=0
 )
 
 total_alloc = needs + wants + savings_alloc
 if total_alloc != income:
-    st.sidebar.error(f"Total allocation (needs+wants+savings={total_alloc}) must equal income ({income})")
+    st.sidebar.error(
+        f"Total allocation (needs+wants+savings={total_alloc}) must equal income ({income})"
+    )
     st.stop()
 
+# Save facilitator settings
 st.session_state.facilitator_settings = {
     "goal": goal,
     "income": income,
@@ -115,7 +130,9 @@ if st.session_state.players:
             [format_option_text(opt) for opt in card["options"]],
             key=f"choice_{player['name']}"
         )
-        selected_option = card["options"][[format_option_text(opt) for opt in card["options"]].index(option_choice)]
+        selected_option = card["options"][
+            [format_option_text(opt) for opt in card["options"]].index(option_choice)
+        ]
 
         if st.button("Submit Option"):
             valid, msg = is_valid_option(player, selected_option)
@@ -127,4 +144,6 @@ if st.session_state.players:
                 st.session_state.current_card = None  # Reset card
                 st.experimental_rerun()  # Refresh to next player
 
-    st.markdown(f"**Savings:** {player['savings']}, **Well-being:** {player['emotion']}, **Energy:** {player['time']}")
+    st.markdown(
+        f"**Savings:** {player['savings']}, **Well-being:** {player['emotion']}, **Energy:** {player['time']}"
+    )
