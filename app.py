@@ -21,9 +21,6 @@ if "facilitator_settings" not in st.session_state:
         "rounds": 10,
     }
 
-if "pending_rerun" not in st.session_state:
-    st.session_state.pending_rerun = False
-
 # -------------------------------
 # Load cards
 # -------------------------------
@@ -115,7 +112,6 @@ if not st.session_state.player_created:
             }
         )
         st.session_state.player_created = True
-        st.session_state.pending_rerun = True
 
 if st.session_state.player_created:
     player = st.session_state.players[st.session_state.current_player]
@@ -127,12 +123,13 @@ if st.session_state.player_created:
 
     with game_col:
         st.subheader(f"Current Player: {player['name']} (Team: {player['team']})")
-        st.markdown(f"Rounds Played: {player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}")
+        st.markdown(
+            f"### Rounds Played: {player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}"
+        )
 
         # Draw card
-        if st.button("Draw Life Card"):
+        if st.button("🎴 Draw Life Card"):
             st.session_state.current_card = random.choice(cards)
-            st.session_state.pending_rerun = True
 
         card = st.session_state.current_card
         if card:
@@ -142,21 +139,24 @@ if st.session_state.player_created:
                 [format_option_text(opt) for opt in card["options"]],
                 key=f"choice_{player['name']}",
             )
-            selected_option = card["options"][[format_option_text(opt) for opt in card["options"]].index(option_choice)]
+            selected_option = card["options"][
+                [format_option_text(opt) for opt in card["options"]].index(option_choice)
+            ]
             selected_option["card_title"] = card["title"]
 
-            if st.button("Submit Decision"):
+            if st.button("✅ Submit Decision"):
                 valid, msg = is_valid_option(player, selected_option)
                 if not valid:
                     st.warning(msg)
                 else:
                     player = apply_effects(player, selected_option)
                     player["rounds_played"] += 1
-                    st.session_state.current_card = None  # Clear card
-                    st.session_state.pending_rerun = True
+                    st.session_state.current_card = None  # Clear card instantly
+                    st.session_state.players[st.session_state.current_player] = player
+                    st.rerun()  # Simple rerun once safely
 
     # -------------------------------
-    # Player stats panel
+    # Player stats panel (3D card)
     # -------------------------------
     with stats_col:
         st.markdown(
@@ -169,21 +169,23 @@ if st.session_state.player_created:
                 max-height: 90vh;
                 overflow-y: auto;
             '>
-            <h3>Player Stats 🏆</h3>
+            <h3>🏆 Player Stats</h3>
             <b>Rounds Played:</b> {player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}<br>
             <b>Savings Goal:</b> {format_currency(player['savings_goal_amount'])} ({player['savings_goal_desc']})<br>
             <b>Current Savings:</b> {format_currency(player['savings'])} 
-            ({int(player['savings']/player['savings_goal_amount']*100)}%)
+            ({int(player['savings']/player['savings_goal_amount']*100)}%)<br>
             <progress value="{player['savings']}" max="{player['savings_goal_amount']}" style="width:100%"></progress><br>
             <b>Monthly Income:</b> {format_currency(player['income'])}<br>
-            <b>Budget Allocation (SAR):</b><br>
-            <div style='display:flex; gap:10px;'>
+            <b>Well-being:</b> {player['emotion']} ❤️<br>
+            <b>Energy:</b> {player['time']} ⚡<br>
+            <hr style='margin:10px 0;'>
+            <h4>💰 Budget Allocation</h4>
+            <div style='display:flex; gap:10px; flex-wrap:wrap;'>
                 Needs: {st.number_input("Needs", min_value=0, step=50, value=player['allocation']['needs'], key="needs")}<br>
                 Wants: {st.number_input("Wants", min_value=0, step=50, value=player['allocation']['wants'], key="wants")}<br>
                 Savings: {st.number_input("Savings", min_value=0, step=50, value=player['allocation']['savings'], key="save_alloc")}<br>
             </div>
-            <b>Well-being:</b> {player['emotion']} ❤️<br>
-            <b>Energy:</b> {player['time']} ⚡<br>
+            <button style='margin-top:10px; background:#4CAF50; color:white; border:none; padding:8px 15px; border-radius:8px;'>Save</button>
             </div>
             """,
             unsafe_allow_html=True,
@@ -195,11 +197,4 @@ if st.session_state.player_created:
     if player["decision_log"]:
         st.subheader("Decision Log 📝")
         for log in player["decision_log"]:
-            st.markdown(f"- {log['card']} → {log['choice']}")
-
-# -------------------------------
-# Safe rerun at end
-# -------------------------------
-if st.session_state.pending_rerun:
-    st.session_state.pending_rerun = False
-    st.experimental_rerun()
+            st.markdown(f"- **{log['card']}** → {log['choice']}")
