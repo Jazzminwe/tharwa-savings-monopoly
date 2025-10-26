@@ -14,6 +14,9 @@ if "current_player" not in st.session_state:
 if "current_card" not in st.session_state:
     st.session_state.current_card = None
 
+if "decision_log" not in st.session_state:
+    st.session_state.decision_log = []
+
 if "facilitator_settings" not in st.session_state:
     st.session_state.facilitator_settings = {
         "goal": 5000,
@@ -54,7 +57,7 @@ def is_valid_option(player, option):
     return True, ""
 
 def format_option_text(opt):
-    return f"{opt['text']} → Money: {opt['money']:,} SAR, Wellbeing: {opt['wellbeing']}, Time: {opt['time']}"
+    return f"{opt['text']} → 💰 {opt['money']:,} SAR, 😊 {opt['wellbeing']}, ⚡ {opt['time']}"
 
 def currency_fmt(val):
     return f"{val:,} SAR"
@@ -115,8 +118,8 @@ if st.button("Create Player") and player_name and team_name and total_alloc == m
 # --------------------------------
 if st.session_state.players:
     player = st.session_state.players[st.session_state.current_player]
-    col1, col2 = st.columns([2, 1])
 
+    col1, col2 = st.columns([2, 1])
     with col1:
         st.subheader(f"Current Player: {player['name']} (Team: {player['team_name']})")
 
@@ -127,40 +130,57 @@ if st.session_state.players:
 
         card = st.session_state.current_card
         if card:
-            st.markdown(f"**Card:** {card['title']}")
+            st.markdown(f"### Card: {card['title']}")
             option_choice = st.radio(
                 "Choose an option",
                 [format_option_text(opt) for opt in card["options"]],
                 key=f"choice_{player['name']}"
             )
             selected_option = card["options"][[format_option_text(opt) for opt in card["options"]].index(option_choice)]
-            if st.button("Submit Option"):
+
+            if st.button("Submit Decision"):
                 valid, msg = is_valid_option(player, selected_option)
                 if not valid:
                     st.warning(msg)
                 else:
                     apply_effects(player, selected_option)
-                    st.session_state.current_card = None
+                    # Add to decision log
+                    st.session_state.decision_log.append({
+                        "player": player['name'],
+                        "team": player['team_name'],
+                        "decision": selected_option['text'],
+                        "money": selected_option['money'],
+                        "wellbeing": selected_option['wellbeing'],
+                        "time": selected_option['time']
+                    })
+                    st.session_state.current_card = None  # clear card
                     st.session_state.pending_rerun = True
 
     with col2:
-        st.markdown("### Player Stats")
-        st.markdown(f"**Savings Goal:** {currency_fmt(player['savings_goal'])} SAR")
-        st.markdown(f"**Goal Description:** {player.get('savings_goal_desc','')}")
-        st.progress(min(player['savings']/player['savings_goal'], 1.0))
-        st.markdown(f"**Current Savings:** {currency_fmt(player['savings'])}")
-        st.markdown(f"**Monthly Income:** {currency_fmt(player['monthly_income'])}")
+        st.markdown("### 📝 Player Stats & Rounds")
+        st.markdown(f"**Rounds left:** {st.session_state.facilitator_settings['rounds'] - player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}")
 
-        st.markdown("**Budget Allocation (Adjust for next round):**")
-        needs_new = st.number_input(
-            "Needs", min_value=0, step=50, value=player['allocation']['needs'], key=f"needs_{player['name']}"
+        # Visual card style with shadow
+        st.markdown(
+            f"""
+            <div style="padding:20px; border-radius:15px; box-shadow: 2px 4px 20px rgba(0,0,0,0.3); background-color:#fdfdfd">
+            <h4>💰 Savings</h4>
+            <p>{currency_fmt(player['savings'])} / {currency_fmt(player['savings_goal'])} ({player['savings']/player['savings_goal']*100:.1f}%)</p>
+            <progress value="{player['savings']}" max="{player['savings_goal']}" style="width:100%"></progress>
+            <p>Goal Description: {player.get('savings_goal_desc','')}</p>
+
+            <h4>🏦 Monthly Income</h4>
+            <p>{currency_fmt(player['monthly_income'])}</p>
+
+            <h4>📊 Budget Allocation (for next round)</h4>
+            </div>
+            """, unsafe_allow_html=True
         )
-        wants_new = st.number_input(
-            "Wants", min_value=0, step=50, value=player['allocation']['wants'], key=f"wants_{player['name']}"
-        )
-        savings_new = st.number_input(
-            "Savings", min_value=0, step=50, value=player['allocation']['savings'], key=f"savings_{player['name']}"
-        )
+
+        needs_new = st.number_input("Needs", min_value=0, step=50, value=player['allocation']['needs'], key=f"needs_{player['name']}")
+        wants_new = st.number_input("Wants", min_value=0, step=50, value=player['allocation']['wants'], key=f"wants_{player['name']}")
+        savings_new = st.number_input("Savings", min_value=0, step=50, value=player['allocation']['savings'], key=f"savings_{player['name']}")
+
         if st.button("Save Allocation"):
             total = needs_new + wants_new + savings_new
             if total != player['monthly_income']:
@@ -170,10 +190,17 @@ if st.session_state.players:
                 st.success("Allocation saved for next round!")
                 st.session_state.pending_rerun = True
 
-        st.markdown(f"**Well-being:** {player['emotion']}/10")
-        st.markdown(f"**Energy/Time:** {player['time']}/10")
-        rounds_left = rounds - player['rounds_played']
-        st.markdown(f"**Rounds left:** {rounds_left}/{rounds}")
+        st.markdown(f"😊 Well-being: {player['emotion']}/10")
+        st.markdown(f"⚡ Energy/Time: {player['time']}/10")
+
+# --------------------------------
+# Decision log
+# --------------------------------
+if st.session_state.decision_log:
+    st.markdown("---")
+    st.subheader("Decision Log")
+    for idx, d in enumerate(st.session_state.decision_log, 1):
+        st.markdown(f"{idx}. {d['player']} ({d['team']}): {d['decision']} → 💰 {d['money']:,} SAR, 😊 {d['wellbeing']}, ⚡ {d['time']}")
 
 # --------------------------------
 # Safe rerun at end
