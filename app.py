@@ -1,6 +1,7 @@
 import streamlit as st
 import random
 import json
+import os
 
 # --------------------------------
 # Initialize session state
@@ -22,10 +23,25 @@ if "facilitator_settings" not in st.session_state:
     }
 
 # --------------------------------
-# Load cards
+# Load cards safely
 # --------------------------------
-with open("cards.json", "r") as f:
-    cards = json.load(f)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+cards_file = os.path.join(BASE_DIR, "cards.json")
+
+try:
+    with open(cards_file, "r") as f:
+        cards = json.load(f)
+except FileNotFoundError:
+    st.warning("cards.json not found. Using default sample card.")
+    cards = [
+        {
+            "title": "Sample Card",
+            "options": [
+                {"text": "Do nothing", "money": 0, "wellbeing": 0, "time": 0},
+                {"text": "Save 100", "money": 100, "wellbeing": 1, "time": -1},
+            ],
+        }
+    ]
 
 # --------------------------------
 # Helper functions
@@ -52,21 +68,32 @@ def format_option_text(opt):
 # Facilitator setup
 # --------------------------------
 st.sidebar.header("Facilitator Setup")
-goal = st.sidebar.number_input("Savings goal", value=st.session_state.facilitator_settings["goal"])
-income = st.sidebar.number_input("Monthly income", value=st.session_state.facilitator_settings["income"])
-needs = st.sidebar.number_input("Needs allocation", value=st.session_state.facilitator_settings["allocation"]["needs"])
-wants = st.sidebar.number_input("Wants allocation", value=st.session_state.facilitator_settings["allocation"]["wants"])
-savings_alloc = st.sidebar.number_input("Savings allocation", value=st.session_state.facilitator_settings["allocation"]["savings"])
+goal = st.sidebar.number_input(
+    "Savings goal", value=st.session_state.facilitator_settings["goal"]
+)
+income = st.sidebar.number_input(
+    "Monthly income", value=st.session_state.facilitator_settings["income"]
+)
+needs = st.sidebar.number_input(
+    "Needs allocation", value=st.session_state.facilitator_settings["allocation"]["needs"]
+)
+wants = st.sidebar.number_input(
+    "Wants allocation", value=st.session_state.facilitator_settings["allocation"]["wants"]
+)
+savings_alloc = st.sidebar.number_input(
+    "Savings allocation", value=st.session_state.facilitator_settings["allocation"]["savings"]
+)
 
 total_alloc = needs + wants + savings_alloc
 if total_alloc != income:
     st.sidebar.error(f"Total allocation (needs+wants+savings={total_alloc}) must equal income ({income})")
     st.stop()
 
+# Save facilitator settings
 st.session_state.facilitator_settings = {
     "goal": goal,
     "income": income,
-    "allocation": {"needs": needs, "wants": wants, "savings": savings_alloc}
+    "allocation": {"needs": needs, "wants": wants, "savings": savings_alloc},
 }
 
 # --------------------------------
@@ -90,8 +117,7 @@ if st.button("Add Player") and player_name:
 # Game logic
 # --------------------------------
 if st.session_state.players:
-    idx = st.session_state.current_player
-    player = st.session_state.players[idx]
+    player = st.session_state.players[st.session_state.current_player]
     st.subheader(f"Current Player: {player['name']}")
 
     # Draw card
@@ -101,32 +127,24 @@ if st.session_state.players:
     card = st.session_state.current_card
     if card:
         st.markdown(f"**Card:** {card['title']}")
-
-        # Store choice in session state to avoid losing it on rerun
-        choice_key = f"choice_{player['name']}"
-        if choice_key not in st.session_state:
-            st.session_state[choice_key] = None
-
-        option_texts = [format_option_text(opt) for opt in card["options"]]
-        st.session_state[choice_key] = st.radio(
+        option_choice = st.radio(
             "Choose an option",
-            option_texts,
-            index=0,
-            key=choice_key
+            [format_option_text(opt) for opt in card["options"]],
+            key=f"choice_{player['name']}"
         )
-
-        selected_option = card["options"][option_texts.index(st.session_state[choice_key])]
+        # Map back to the option dict
+        selected_option = card["options"][[format_option_text(opt) for opt in card["options"]].index(option_choice)]
 
         if st.button("Submit Option"):
             valid, msg = is_valid_option(player, selected_option)
             if not valid:
                 st.warning(msg)
             else:
-                # Update player in session state
-                st.session_state.players[idx] = apply_effects(player, selected_option)
+                player = apply_effects(player, selected_option)
                 st.success("Option applied!")
-                st.session_state.current_card = None
-                st.session_state.current_player = (st.session_state.current_player + 1) % len(st.session_state.players)
-                st.experimental_rerun()  # Move to next player
+                st.session_state.current_card = None  # Reset card
+                st.experimental_rerun()  # Refresh to next player
 
-    st.markdown(f"**Savings:** {player['savings']}, **Well-being:** {player['emotion']}, **Energy:** {player['time']}")
+    st.markdown(
+        f"**Savings:** {player['savings']}, **Well-being:** {player['emotion']}, **Energy:** {player['time']}"
+    )
