@@ -22,7 +22,7 @@ if "facilitator_settings" not in st.session_state:
     }
 
 # -------------------------------
-# Load cards
+# Load life cards
 # -------------------------------
 with open("data/life_cards.json", "r") as f:
     cards = json.load(f)
@@ -34,7 +34,6 @@ def apply_effects(player, option):
     player["savings"] += option.get("money", 0)
     player["emotion"] += option.get("wellbeing", 0)
     player["time"] += option.get("time", 0)
-    # Log decision
     player.setdefault("decision_log", []).append(
         {"card": option.get("card_title", ""), "choice": option.get("text", "")}
     )
@@ -56,32 +55,34 @@ def format_currency(amount):
     return f"SAR {amount:,.0f}"
 
 # -------------------------------
-# Facilitator setup
+# Facilitator setup (only before game)
 # -------------------------------
-st.sidebar.header("Facilitator Setup")
-goal = st.sidebar.number_input(
-    "Savings goal per player",
-    value=st.session_state.facilitator_settings["goal"],
-    step=50,
-)
-income = st.sidebar.number_input(
-    "Monthly income (SAR)",
-    value=st.session_state.facilitator_settings["income"],
-    step=50,
-)
-rounds = st.sidebar.number_input(
-    "Number of rounds",
-    value=st.session_state.facilitator_settings.get("rounds", 10),
-    step=1,
-    min_value=1,
-)
+if not st.session_state.players:
+    st.sidebar.header("Facilitator Setup")
+    goal = st.sidebar.number_input(
+        "Savings goal per player",
+        value=st.session_state.facilitator_settings["goal"],
+        step=50,
+    )
+    income = st.sidebar.number_input(
+        "Monthly income (SAR)",
+        value=st.session_state.facilitator_settings["income"],
+        step=50,
+    )
+    rounds = st.sidebar.number_input(
+        "Number of rounds",
+        value=st.session_state.facilitator_settings.get("rounds", 10),
+        step=1,
+        min_value=1,
+    )
 
-st.session_state.facilitator_settings = {"goal": goal, "income": income, "rounds": rounds}
+    st.session_state.facilitator_settings = {"goal": goal, "income": income, "rounds": rounds}
 
 # -------------------------------
 # Player setup
 # -------------------------------
 st.header("Players")
+
 if "player_created" not in st.session_state:
     st.session_state.player_created = False
 
@@ -95,6 +96,8 @@ if not st.session_state.player_created:
         step=50,
         value=st.session_state.facilitator_settings["goal"],
     )
+
+    st.markdown(f"### 💵 Monthly Income: {format_currency(st.session_state.facilitator_settings['income'])}")
 
     st.subheader("💰 Initial Budget Allocation")
     needs = st.number_input("Needs (SAR)", min_value=0, step=50, value=1000)
@@ -120,19 +123,24 @@ if not st.session_state.player_created:
         st.session_state.player_created = True
         st.rerun()
 
+# -------------------------------
+# Game Interface
+# -------------------------------
 if st.session_state.player_created:
     player = st.session_state.players[st.session_state.current_player]
 
-    # -------------------------------
-    # Layout: Game left / Stats right
-    # -------------------------------
-    game_col, stats_col = st.columns([1.5, 1], gap="large")
+    # Two-column layout
+    game_col, stats_col = st.columns([1.6, 1], gap="large")
 
     with game_col:
         st.subheader(f"Current Player: {player['name']} (Team: {player['team']})")
-        st.markdown(
-            f"### Rounds Played: {player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}"
-        )
+
+        # Progress bar for rounds
+        rounds_played = player['rounds_played']
+        total_rounds = st.session_state.facilitator_settings['rounds']
+        progress = rounds_played / total_rounds if total_rounds else 0
+        st.progress(progress)
+        st.markdown(f"**Rounds Played:** {rounds_played}/{total_rounds}")
 
         # Draw card
         if st.button("🎴 Draw Life Card"):
@@ -140,7 +148,7 @@ if st.session_state.player_created:
 
         card = st.session_state.current_card
         if card:
-            st.markdown(f"**Card:** {card['title']}")
+            st.markdown(f"### {card['title']}")
             option_choice = st.radio(
                 "Choose an option",
                 [format_option_text(opt) for opt in card["options"]],
@@ -162,6 +170,14 @@ if st.session_state.player_created:
                     st.session_state.players[st.session_state.current_player] = player
                     st.rerun()
 
+        st.markdown("<br><br>", unsafe_allow_html=True)
+
+        # Decision log at bottom
+        if player["decision_log"]:
+            st.subheader("Decision Log 📝")
+            for log in player["decision_log"]:
+                st.markdown(f"- **{log['card']}** → {log['choice']}")
+
     # -------------------------------
     # Player stats panel (3D card)
     # -------------------------------
@@ -171,14 +187,13 @@ if st.session_state.player_created:
             <div style='
                 background-color: #fefefe;
                 padding: 20px;
-                border-radius: 15px;
+                border-radius: 20px;
                 box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-                max-height: 90vh;
+                width: 100%;
                 overflow-y: auto;
                 margin-bottom: 25px;
             '>
             <h3>🏆 Player Stats</h3>
-            <b>Rounds Played:</b> {player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}<br>
             <b>Savings Goal:</b> {format_currency(player['savings_goal_amount'])} ({player['savings_goal_desc']})<br>
             <b>Current Savings:</b> {format_currency(player['savings'])} 
             ({int(player['savings']/player['savings_goal_amount']*100)}%)<br>
@@ -191,27 +206,17 @@ if st.session_state.player_created:
             unsafe_allow_html=True,
         )
 
-        # -------------------------------
-        # Budget allocation BELOW the 3D card
-        # -------------------------------
+        # Budget allocation below stats card
         st.subheader("💰 Adjust Budget Allocation")
-        col_a, col_b, col_c = st.columns(3)
+        col_a, col_b, col_c, col_d = st.columns([1, 1, 1, 0.5])
         with col_a:
             new_needs = st.number_input("Needs", min_value=0, step=50, value=player["allocation"]["needs"], key="needs_adj")
         with col_b:
             new_wants = st.number_input("Wants", min_value=0, step=50, value=player["allocation"]["wants"], key="wants_adj")
         with col_c:
             new_savings = st.number_input("Savings", min_value=0, step=50, value=player["allocation"]["savings"], key="save_adj")
-
-        if st.button("💾 Save"):
-            player["allocation"] = {"needs": new_needs, "wants": new_wants, "savings": new_savings}
-            st.session_state.players[st.session_state.current_player] = player
-            st.success("Budget allocation updated!")
-
-    # -------------------------------
-    # Decision log
-    # -------------------------------
-    if player["decision_log"]:
-        st.subheader("Decision Log 📝")
-        for log in player["decision_log"]:
-            st.markdown(f"- **{log['card']}** → {log['choice']}")
+        with col_d:
+            if st.button("💾 Save"):
+                player["allocation"] = {"needs": new_needs, "wants": new_wants, "savings": new_savings}
+                st.session_state.players[st.session_state.current_player] = player
+                st.success("Budget allocation updated!")
