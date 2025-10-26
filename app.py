@@ -119,7 +119,8 @@ if st.button("Create Player") and player_name and team_name and total_alloc == m
 if st.session_state.players:
     player = st.session_state.players[st.session_state.current_player]
 
-    col1, col2 = st.columns([2, 1])
+    # Add horizontal spacing between game area and player stats
+    col1, col2 = st.columns([2, 1], gap="large")
     with col1:
         st.subheader(f"Current Player: {player['name']} (Team: {player['team_name']})")
 
@@ -144,7 +145,6 @@ if st.session_state.players:
                     st.warning(msg)
                 else:
                     apply_effects(player, selected_option)
-                    # Add to decision log
                     st.session_state.decision_log.append({
                         "player": player['name'],
                         "team": player['team_name'],
@@ -153,20 +153,20 @@ if st.session_state.players:
                         "wellbeing": selected_option['wellbeing'],
                         "time": selected_option['time']
                     })
-                    st.session_state.current_card = None  # clear card
+                    st.session_state.current_card = None
                     st.session_state.pending_rerun = True
 
     with col2:
-        # -----------------------------
         # Player stats panel (shadow card)
-        # -----------------------------
         st.markdown(
             f"""
             <div style="
                 padding:20px; 
                 border-radius:15px; 
-                box-shadow: 2px 4px 20px rgba(0,0,0,0.3); 
+                box-shadow: 2px 4px 25px rgba(0,0,0,0.3); 
                 background-color:#fdfdfd;
+                min-height:450px;
+                overflow:auto;
             ">
             <h4>📝 Player Stats</h4>
             <p><strong>Rounds left:</strong> {st.session_state.facilitator_settings['rounds'] - player['rounds_played']}/{st.session_state.facilitator_settings['rounds']}</p>
@@ -180,8 +180,6 @@ if st.session_state.players:
             <p>{currency_fmt(player['monthly_income'])}</p>
 
             <h4>📊 Budget Allocation (Next Round)</h4>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            </div>
             </div>
             """, unsafe_allow_html=True
         )
