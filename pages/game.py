@@ -38,12 +38,19 @@ left_col, right_col = st.columns([1.2, 1], gap="large")
 # 🎴 LEFT: Game Area
 # -------------------------------
 with left_col:
-    # --- Button: disabled if card already active
     draw_disabled = player.get("current_card") is not None
     draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
 
-    # --- Progress bar (slightly shorter)
-    st.progress(player["rounds_played"] / fs["rounds"])
+    # --- Compact progress bar styling
+    progress_fraction = player["rounds_played"] / fs["rounds"]
+    st.markdown(
+        f"""
+        <div style="width:70%; margin-top:0.5rem;">
+            <progress value="{progress_fraction}" max="1" style="width:100%; height:8px; border-radius:4px;"></progress>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
     st.write(" ")
 
@@ -81,7 +88,6 @@ with left_col:
         if options:
             choice = st.radio("Choose an option:", options, key="decision_choice")
 
-            # Save decision button (only one click)
             if st.button("💾 Save Decision", key="save_decision"):
                 if not player.get("choice_made"):
                     selected = card["options"][options.index(choice)]
@@ -91,7 +97,7 @@ with left_col:
                     player["rounds_played"] += 1
                     player["decision_log"].append(choice)
                     player["choice_made"] = True
-                    player["current_card"] = None  # clear card to allow next draw
+                    player["current_card"] = None
                     st.session_state.player = player
                     st.success("✅ Decision saved! Stats updated.")
                     time.sleep(0.8)
@@ -104,11 +110,23 @@ with left_col:
 # 🧍 RIGHT: Player Stats
 # -------------------------------
 with right_col:
+    # Style for shadow box
+    st.markdown("""
+        <style>
+        .stats-box {
+            background-color: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+            padding: 24px 28px;
+        }
+        </style>
+        <div class="stats-box">
+    """, unsafe_allow_html=True)
+
     st.markdown(f"### 🧍 {player['name']}")
     st.caption(f"Team: {player['team']}")
     st.write(" ")
 
-    # Savings and goal
     st.markdown(f"**Savings Goal:** {player['goal_desc']}")
     st.markdown(
         f"**Current Savings:** {format_currency(player['savings'])} "
@@ -116,13 +134,11 @@ with right_col:
     )
     st.progress(player["savings"] / fs["goal"])
 
-    # Emojis for energy and well-being
     st.write("")
     st.markdown(f"**Energy:** {render_emoji_stat(player['time'], '⚡')}")
     st.markdown(f"**Well-being:** {render_emoji_stat(player['emotion'], '❤️')}")
     st.divider()
 
-    # Financial details
     remaining = player["income"] - player["fixed_costs"]
     wants_val = player["allocation"]["wants"]
     savings_val = player["allocation"]["savings"]
@@ -152,6 +168,8 @@ with right_col:
             player["allocation"]["savings"] = new_savings
             st.session_state.player = player
             st.success("✅ Budget updated!")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # -------------------------------
