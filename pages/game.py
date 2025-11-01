@@ -9,13 +9,12 @@ def format_currency(value):
     return f"SAR {value:,}"
 
 def render_emoji_stat(value, emoji, max_value=10):
-    """Return emoji repeated for each point and show as x/10."""
     full = emoji * int(value)
     empty = "▫️" * int(max_value - value)
     return f"{full}{empty} ({int(value)}/{max_value})"
 
 # ---------------------------------------
-# Load facilitator settings & player
+# Setup
 # ---------------------------------------
 if "player" not in st.session_state or "facilitator_settings" not in st.session_state:
     st.warning("No player data found. Please start from the setup page.")
@@ -24,22 +23,22 @@ if "player" not in st.session_state or "facilitator_settings" not in st.session_
 player = st.session_state.player
 fs = st.session_state.facilitator_settings
 
+st.set_page_config(layout="wide")
+st.title("🎲 Draw Life Card")
+st.markdown("---")
+
 # ---------------------------------------
 # Layout
 # ---------------------------------------
-st.set_page_config(layout="wide")
-st.title("🎲 Draw Life Card")
-
-game_col, stats_col = st.columns([1.2, 1], gap="large")
+left_col, right_col = st.columns([1.2, 1], gap="large")
 
 # -------------------------------
-# Left column — Life card logic
+# 🎴 Left: Game Area
 # -------------------------------
-with game_col:
-    st.markdown("### 🎴 Draw Life Card")
+with left_col:
+    st.markdown("## 🎴 Draw Life Card")
 
-    progress_value = player["rounds_played"] / fs["rounds"]
-    st.progress(progress_value)
+    st.progress(player["rounds_played"] / fs["rounds"])
     st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
     st.write(" ")
 
@@ -47,7 +46,9 @@ with game_col:
         with open("data/life_cards.json", "r") as f:
             st.session_state.life_cards = json.load(f)
 
-    st.button("Draw Life Card", type="primary")
+    if st.button("Draw Life Card", type="primary"):
+        player["current_card"] = random.choice(st.session_state.life_cards)
+        st.session_state.player = player
 
     if player.get("current_card"):
         card = player["current_card"]
@@ -68,59 +69,52 @@ with game_col:
             st.success("Decision logged!")
 
 # -------------------------------
-# Right column — Player stats
+# 🧍 Right: Player Overview Card
 # -------------------------------
-with stats_col:
-    st.markdown("### 🧍 Player Overview")
+with right_col:
+    # Apply unified card style
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stMarkdown"]) {
+            background-color: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            padding: 30px 25px 25px 25px;
+            margin-bottom: 1.5rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Card-style box
-    with st.container():
-        st.markdown(
-            """
-            <style>
-                div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stHorizontalBlock"]) {
-                    background-color: #ffffff;
-                    padding: 20px 25px 25px 25px;
-                    border-radius: 18px;
-                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
-                    margin-bottom: 1.5rem;
-                }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
+    # Card top
+    st.markdown(f"## 🧍 {player['name']}")
+    st.caption(f"Team: {player['team']}")
 
-        st.markdown(f"#### {player['name']}")
-        st.caption(player["team"])
+    st.markdown(f"**Savings Goal:** {player['goal_desc']}")
+    st.markdown(f"**Current Savings:** {format_currency(player['savings'])} "
+                f"({int((player['savings'] / max(1, fs['goal'])) * 100)}%)")
+    st.progress(player["savings"] / fs["goal"])
 
-        st.markdown(f"**Savings Goal:** {player['goal_desc']}")
-        st.markdown(
-            f"**Current Savings:** {format_currency(player['savings'])} "
-            f"({int((player['savings'] / max(1, fs['goal'])) * 100)}%)"
-        )
-        st.progress(player["savings"] / fs["goal"])
+    st.write("")
+    st.markdown(f"**Energy:** {render_emoji_stat(player['time'], '⚡')}")
+    st.markdown(f"**Well-being:** {render_emoji_stat(player['emotion'], '❤️')}")
+    st.divider()
 
-        # Energy and Well-being
-        st.write(f"**Energy:** {render_emoji_stat(player['time'], '⚡')}")
-        st.write(f"**Well-being:** {render_emoji_stat(player['emotion'], '❤️')}")
+    remaining = player["income"] - player["fixed_costs"]
+    wants_val = player["allocation"]["wants"]
+    savings_val = player["allocation"]["savings"]
 
-        st.divider()
+    st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
+    st.markdown(f"**Fixed Expenses:** {format_currency(player['fixed_costs'])}")
+    st.markdown(f"**Remaining Budget:** {format_currency(remaining)}")
 
-        # Budget information
-        remaining = player["income"] - player["fixed_costs"]
-        wants_val = player["allocation"]["wants"]
-        savings_val = player["allocation"]["savings"]
-        total = wants_val + savings_val
-
-        st.write(f"**Monthly Income:** {format_currency(player['income'])}")
-        st.write(f"**Fixed Expenses:** {format_currency(player['fixed_costs'])}")
-        st.markdown(f"**Remaining Budget:** {format_currency(remaining)}")
-
-    # Budget allocation block
+    st.markdown("---")
     st.markdown("### 💰 Budget Allocation")
     st.caption("Adjust your monthly distribution below:")
 
-    col1, col2, col3 = st.columns([1, 1, 0.6])
+    col1, col2, col3 = st.columns([1, 1, 0.5])
     with col1:
         new_wants = st.number_input("Wants (SAR)", min_value=0, max_value=remaining, value=wants_val, step=50)
     with col2:
@@ -139,9 +133,9 @@ with stats_col:
             st.success("✅ Budget updated!")
 
 # -------------------------------
-# Decision log
+# 🧾 Decision log
 # -------------------------------
-st.divider()
+st.markdown("---")
 st.subheader("🧾 Decision Log")
 if player["decision_log"]:
     for i, d in enumerate(player["decision_log"], 1):
