@@ -66,10 +66,9 @@ if player.get("ef_full_alert", False):
     st.stop()
 
 # -------------------------------
-# Automatic contributions after each round (but not before round 1)
+# Automatic contributions (post-round)
 # -------------------------------
 if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
-    # Add allocations
     ef_add = player["allocation"]["ef"]
     wants_add = player["allocation"]["wants"]
     projected = player["ef_balance"] + ef_add
@@ -79,7 +78,6 @@ if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
         st.session_state.player = player
         st.rerun()
 
-    # Add to EF, savings, wants
     player["ef_balance"] += min(ef_add, max(0, player["ef_cap"] - player["ef_balance"]))
     player["savings"] += player["allocation"]["savings"]
     player["wants_balance"] += wants_add
@@ -100,7 +98,7 @@ with left_col:
     st.progress(progress_fraction)
     st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
 
-    # Allowed card types based on round & progress
+    # Determine allowed card types
     def allowed_types(round_idx, player):
         base = ["positive", "neutral", "negative_type_1"]
         if round_idx >= 4:
@@ -109,7 +107,6 @@ with left_col:
             base.append("temptation")
         return base
 
-    # Draw button
     game_over = player["rounds_played"] >= fs["rounds"]
     draw_disabled = player.get("current_card") is not None or game_over
 
@@ -128,7 +125,7 @@ with left_col:
         player["choice_made"] = False
         st.session_state.player = player
 
-    # Display card
+    # Display current card
     if not player.get("current_card"):
         st.markdown("## 🎴 Draw a life card to start the month.")
     else:
@@ -159,40 +156,59 @@ with left_col:
                         st.warning("⏳ You don’t have enough energy for this choice — it won’t be applied.")
                         st.stop()
 
-                    # Apply wellbeing and time changes
+                    # Update wellbeing and time
                     old_emotion = player["emotion"]
                     player["emotion"] = max(0, min(10, old_emotion + delta_wellbeing))
                     player["time"] = max(0, min(10, player["time"] - delta_time))
 
-                    # Check burnout
+                    # Burnout check
                     if player["emotion"] <= 0:
                         st.error("💥 Burnout! Your wellbeing reached 0 — you’ve burned out and can’t continue.")
                         st.markdown("Return to the group screen to discuss your results.")
                         st.stop()
 
-                    # Handle money effects
+                    # -----------------------
+                    # MONEY HANDLING LOGIC
+                    # -----------------------
                     if delta_money < 0 and delta_wellbeing > 0:
-                        # Wellbeing expense (Wants)
+                        # Spending for wellbeing (Wants → Savings hierarchy)
                         cost = abs(delta_money)
-                        if cost <= player["wants_balance"]:
+                        wants = player["wants_balance"]
+                        savings = player["savings"]
+
+                        if wants >= cost:
+                            # Fully covered by wants
                             player["wants_balance"] -= cost
+
                         else:
-                            shortfall = cost - player["wants_balance"]
-                            st.warning(
-                                f"You only have {format_currency(player['wants_balance'])} in your Wants fund. "
-                                f"The remaining {format_currency(shortfall)} will be deducted from your Savings Goal."
-                            )
-                            if st.button("Acknowledge and Continue"):
-                                player["wants_balance"] = 0
-                                player["savings"] -= shortfall
-                            st.stop()
+                            # Wants insufficient → check savings
+                            shortfall = cost - wants
+                            if savings >= shortfall:
+                                st.warning(
+                                    f"You only have {format_currency(wants)} in your Wants fund. "
+                                    f"The remaining {format_currency(shortfall)} will be deducted from your Savings Goal."
+                                )
+                                if st.button("Acknowledge and Continue"):
+                                    player["wants_balance"] = 0
+                                    player["savings"] -= shortfall
+                                else:
+                                    st.stop()
+                            else:
+                                st.error(
+                                    f"🚫 Insufficient funds! You need {format_currency(cost)}, "
+                                    f"but only have {format_currency(wants)} in Wants and {format_currency(savings)} in Savings. "
+                                    f"Please pick another option."
+                                )
+                                st.stop()
+
                     elif card.get("ef_eligible", False) and delta_money < 0:
-                        # Emergency fund eligible event
+                        # Emergency fund applies
                         need = abs(delta_money)
                         cover = min(player["ef_balance"], need)
                         player["ef_balance"] -= cover
                         player["savings"] -= (need - cover)
                     else:
+                        # Regular income/expense
                         player["savings"] += delta_money
 
                     # End round
@@ -253,7 +269,7 @@ with right_col:
     st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
 
 # -------------------------------
-# Decision log
+# Decision Log
 # -------------------------------
 st.markdown("---")
 st.subheader("🧾 Decision Log")
