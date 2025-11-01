@@ -13,6 +13,15 @@ def render_emoji_stat(value, emoji, max_value=10):
     empty = "▫️" * int(max_value - value)
     return f"{full}{empty} ({int(value)}/{max_value})"
 
+def team_color(team):
+    palette = {
+        "Thuraya": "#1E88E5",
+        "Horizon": "#43A047",
+        "Nova": "#FDD835",
+        "Orion": "#FB8C00",
+    }
+    return palette.get(team, "#6366F1")  # default indigo
+
 # ---------------------------------------
 # Setup
 # ---------------------------------------
@@ -69,68 +78,91 @@ with left_col:
             st.success("Decision logged!")
 
 # -------------------------------
-# 🧍 Right: Player Overview Card
+# 🧍 Right: Single Unified Player Card
 # -------------------------------
 with right_col:
-    # Apply unified card style
+    color = team_color(player["team"])
+
     st.markdown(
-        """
+        f"""
         <style>
-        div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stMarkdown"]) {
+        .player-card {{
             background-color: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-            padding: 30px 25px 25px 25px;
+            border-radius: 18px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.07);
+            padding: 25px 30px;
             margin-bottom: 1.5rem;
-        }
+            position: relative;
+        }}
+        .player-card::before {{
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            border-top-left-radius: 18px;
+            border-top-right-radius: 18px;
+            background-color: {color};
+        }}
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # Card top
-    st.markdown(f"## 🧍 {player['name']}")
-    st.caption(f"Team: {player['team']}")
+    with st.container():
+        st.markdown('<div class="player-card">', unsafe_allow_html=True)
 
-    st.markdown(f"**Savings Goal:** {player['goal_desc']}")
-    st.markdown(f"**Current Savings:** {format_currency(player['savings'])} "
-                f"({int((player['savings'] / max(1, fs['goal'])) * 100)}%)")
-    st.progress(player["savings"] / fs["goal"])
+        # --- Player Header ---
+        st.markdown(f"### 🧍 {player['name']}")
+        st.caption(f"Team: {player['team']}")
+        st.write(" ")
 
-    st.write("")
-    st.markdown(f"**Energy:** {render_emoji_stat(player['time'], '⚡')}")
-    st.markdown(f"**Well-being:** {render_emoji_stat(player['emotion'], '❤️')}")
-    st.divider()
+        # --- Goal & Savings ---
+        st.markdown(f"**Savings Goal:** {player['goal_desc']}")
+        st.markdown(f"**Current Savings:** {format_currency(player['savings'])} "
+                    f"({int((player['savings'] / max(1, fs['goal'])) * 100)}%)")
+        st.progress(player["savings"] / fs["goal"])
 
-    remaining = player["income"] - player["fixed_costs"]
-    wants_val = player["allocation"]["wants"]
-    savings_val = player["allocation"]["savings"]
+        # --- Emoji Stats ---
+        st.write("")
+        st.markdown(f"**Energy:** {render_emoji_stat(player['time'], '⚡')}")
+        st.markdown(f"**Well-being:** {render_emoji_stat(player['emotion'], '❤️')}")
+        st.divider()
 
-    st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
-    st.markdown(f"**Fixed Expenses:** {format_currency(player['fixed_costs'])}")
-    st.markdown(f"**Remaining Budget:** {format_currency(remaining)}")
+        # --- Financial Overview ---
+        remaining = player["income"] - player["fixed_costs"]
+        wants_val = player["allocation"]["wants"]
+        savings_val = player["allocation"]["savings"]
 
-    st.markdown("---")
-    st.markdown("### 💰 Budget Allocation")
-    st.caption("Adjust your monthly distribution below:")
+        st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
+        st.markdown(f"**Fixed Expenses:** {format_currency(player['fixed_costs'])}")
+        st.markdown(f"**Remaining Budget:** {format_currency(remaining)}")
 
-    col1, col2, col3 = st.columns([1, 1, 0.5])
-    with col1:
-        new_wants = st.number_input("Wants (SAR)", min_value=0, max_value=remaining, value=wants_val, step=50)
-    with col2:
-        new_savings = st.number_input("Savings (SAR)", min_value=0, max_value=remaining, value=savings_val, step=50)
-    with col3:
-        st.markdown("<br>", unsafe_allow_html=True)
-        save = st.button("💾 Save", use_container_width=True)
+        # --- Budget Allocation ---
+        st.markdown("---")
+        st.markdown("### 💰 Budget Allocation")
+        st.caption("Adjust your monthly distribution below:")
 
-    if save:
-        if (new_wants + new_savings) != remaining:
-            st.warning(f"⚠️ Allocations must equal remaining budget ({format_currency(remaining)}).")
-        else:
-            player["allocation"]["wants"] = new_wants
-            player["allocation"]["savings"] = new_savings
-            st.session_state.player = player
-            st.success("✅ Budget updated!")
+        col1, col2, col3 = st.columns([1, 1, 0.5])
+        with col1:
+            new_wants = st.number_input("Wants (SAR)", min_value=0, max_value=remaining, value=wants_val, step=50)
+        with col2:
+            new_savings = st.number_input("Savings (SAR)", min_value=0, max_value=remaining, value=savings_val, step=50)
+        with col3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            save = st.button("💾 Save", use_container_width=True)
+
+        if save:
+            if (new_wants + new_savings) != remaining:
+                st.warning(f"⚠️ Allocations must equal remaining budget ({format_currency(remaining)}).")
+            else:
+                player["allocation"]["wants"] = new_wants
+                player["allocation"]["savings"] = new_savings
+                st.session_state.player = player
+                st.success("✅ Budget updated!")
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------
 # 🧾 Decision log
