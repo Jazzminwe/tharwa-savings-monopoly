@@ -139,71 +139,64 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# -------------------------------------------------
-# KPI Row (with boxes)
-# -------------------------------------------------
+# --- KPI ROW ---
 remaining = int(p["income"] - p["fixed_costs"])
 k1, k2, k3, k4 = st.columns(4, gap="small")
 
-with k1:
+def kpi_box(title, content_fn):
     with st.container():
-        st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-        st.markdown("#### 💰 Budget Overview")
-        st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
-        st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
-        st.markdown(f"**Remaining:** {fmt(remaining)}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style="
+                background:#fff;
+                border-radius:16px;
+                box-shadow:0 3px 12px rgba(0,0,0,0.08);
+                padding:18px 22px;
+                height:100%;
+            ">
+            """,
+            unsafe_allow_html=True
+        )
+        st.markdown(f"#### {title}")
+        content_fn()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+with k1:
+    kpi_box("💰 Budget Overview", lambda: [
+        st.markdown(f"**Monthly Income:** {fmt(p['income'])}"),
+        st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}"),
+        st.markdown(f"**Remaining:** {fmt(remaining)}"),
+    ])
 
 with k2:
-    with st.container():
-        st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-        st.markdown("#### 🎯 Savings Goal")
-        goal_value = fs.get("goal", 5000)
-        savings_value = p.get("savings", 0)
-        pct = (savings_value / goal_value) if goal_value else 0.0
+    def savings_content():
+        goal = fs.get("goal", 5000)
+        pct = p["savings"]/goal if goal else 0
         st.progress(min(1.0, pct))
-        st.markdown(f"**{fmt(savings_value)} / {fmt(goal_value)}** ({int(pct * 100)}%)")
+        st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
         p["allocation"]["savings"] = st.number_input(
-            "Monthly allocation:",
-            min_value=0,
-            max_value=remaining,
-            value=int(p["allocation"]["savings"]),
-            step=50,
-            key="alloc_savings"
+            "Monthly allocation:", 0, remaining, int(p["allocation"]["savings"]), 50, key="alloc_s"
         )
-        st.markdown('</div>', unsafe_allow_html=True)
+    kpi_box("🎯 Savings Goal", savings_content)
 
 with k3:
-    with st.container():
-        st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-        st.markdown("#### 🛟 Emergency Fund")
+    def ef_content():
         st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
         st.caption(f"Cap: {fmt(p['ef_cap'])}")
         p["allocation"]["ef"] = st.number_input(
-            "Monthly allocation:",
-            min_value=0,
-            max_value=remaining,
-            value=int(p["allocation"]["ef"]),
-            step=50,
-            key="alloc_ef"
+            "Monthly allocation:", 0, remaining, int(p["allocation"]["ef"]), 50, key="alloc_ef"
         )
-        st.markdown('</div>', unsafe_allow_html=True)
+    kpi_box("🛟 Emergency Fund", ef_content)
 
 with k4:
-    with st.container():
-        st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-        st.markdown("#### 🎉 Wants Fund")
+    def wants_content():
         st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
         st.caption("Cap: None")
         p["allocation"]["wants"] = st.number_input(
-            "Monthly allocation:",
-            min_value=0,
-            max_value=remaining,
-            value=int(p["allocation"]["wants"]),
-            step=50,
-            key="alloc_wants"
+            "Monthly allocation:", 0, remaining, int(p["allocation"]["wants"]), 50, key="alloc_w"
         )
-        st.markdown('</div>', unsafe_allow_html=True)
+    kpi_box("🎉 Wants Fund", wants_content)
+
 
 st.session_state.player = p
 
