@@ -235,7 +235,7 @@ with st.form("create_player_form"):
             st.session_state.players.append(new_player)
             st.session_state.current_player = len(st.session_state.players) - 1
             st.success(f"Player '{player_name}' added.")
-            st.experimental_rerun()
+            st.rerun()
 
 # -------------------------------
 # If no players, show info and stop here
@@ -300,7 +300,7 @@ with game_col:
                     st.session_state.players[st.session_state.current_player] = player
                     st.session_state.current_card = None
                     st.success("Decision applied and round settled.")
-                    st.experimental_rerun()
+                    st.rerun()
         else:
             st.info("This card has no options.")
 
