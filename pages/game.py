@@ -14,7 +14,6 @@ def render_emoji_stat(value, emoji, max_value=10):
     empty = "▫️" * int(max_value - value)
     return f"{full}{empty} ({int(value)}/{max_value})"
 
-
 # -------------------------------
 # Setup
 # -------------------------------
@@ -24,7 +23,6 @@ if "player" not in st.session_state or "facilitator_settings" not in st.session_
 
 player = st.session_state.player
 fs = st.session_state.facilitator_settings
-
 st.set_page_config(layout="wide")
 
 # -------------------------------
@@ -32,65 +30,61 @@ st.set_page_config(layout="wide")
 # -------------------------------
 st.markdown("""
 <style>
-div.block-container {
-    padding-top: 2.4rem !important;
+div.block-container { padding-top: 2.2rem !important; }
+.kpi-box {
+    background-color: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    padding: 16px 18px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
-h3, h4, h5 {margin-bottom: 0.3rem !important;}
-.small-label {color:#777;font-size:0.85rem;}
-
-/* KPI row as flex container */
-.kpi-row {
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: space-between;
-  align-items: stretch;
-  gap: 1rem;
-  width: 100%;
+.kpi-row > div[data-testid="stVerticalBlock"] {
+    display: flex;
+    flex-direction: column;
+    justify-content: stretch;
 }
-
-/* Real box style for each KPI */
-div[data-testid="stVerticalBlock"] > div.kpi-card {
-  flex: 1;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.1);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-/* Fix progress bar look */
+.kpi-row { align-items: stretch; }
 .stProgress > div > div {
-  height: 6px !important;
-  border-radius: 4px !important;
+    height: 6px !important;
+    border-radius: 4px !important;
 }
-
-/* Title and counter layout */
 .title-row {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  width:100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
-.title-row h3 {
-  margin:0;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
+.title-row h3 { margin: 0; }
 .rounds-info {
-  font-size:0.9rem;
-  color:#444;
-  text-align:right;
+    font-size: 0.9rem;
+    color: #444;
+    text-align: right;
 }
 .round-progress {
-  width:160px;
-  height:8px;
-  border-radius:4px;
-  display:block;
+    width: 160px;
+    height: 8px;
+    border-radius: 4px;
 }
 </style>
+""", unsafe_allow_html=True)
+
+# -------------------------------
+# Header
+# -------------------------------
+rounds_played = player["rounds_played"]
+total_rounds = fs["rounds"]
+progress = rounds_played / max(1, total_rounds)
+
+st.markdown(f"""
+<div class="title-row">
+    <h3>💰 <b>Savings Monopoly</b></h3>
+    <div class="rounds-info">
+        Rounds: {rounds_played}/{total_rounds}<br>
+        <progress class="round-progress" value="{progress}" max="1"></progress>
+    </div>
+</div>
 """, unsafe_allow_html=True)
 
 # -------------------------------
@@ -101,44 +95,7 @@ if "life_cards" not in st.session_state:
         st.session_state.life_cards = json.load(f)
 
 # -------------------------------
-# HEADER
-# -------------------------------
-rounds_played = player["rounds_played"]
-total_rounds = fs["rounds"]
-progress = rounds_played / max(1, total_rounds)
-
-st.markdown(
-    f"""
-    <div class="title-row">
-        <h3>💰 <b>Savings Monopoly</b></h3>
-        <div class="rounds-info">
-            <div>Rounds: {rounds_played}/{total_rounds}</div>
-            <progress class="round-progress" value="{progress}" max="1"></progress>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-# -------------------------------
-# Auto Contributions
-# -------------------------------
-if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
-    ef_add = player["allocation"]["ef"]
-    wants_add = player["allocation"]["wants"]
-    projected = player["ef_balance"] + ef_add
-    if ef_add > 0 and projected >= player["ef_cap"] and not player.get("ef_full_alert", False):
-        player["ef_full_alert"] = True
-        st.session_state.player = player
-        st.rerun()
-    player["ef_balance"] += min(ef_add, max(0, player["ef_cap"] - player["ef_balance"]))
-    player["savings"] += player["allocation"]["savings"]
-    player["wants_balance"] += wants_add
-    player["awaiting_round_start"] = False
-    st.session_state.player = player
-
-# -------------------------------
-# KPI DASHBOARD (equal height boxes)
+# KPI Row
 # -------------------------------
 remaining = player["income"] - player["fixed_costs"]
 
@@ -156,76 +113,73 @@ def update_allocations(new_wants=None, new_ef=None):
     st.toast("✅ Budget updated!")
 
 st.markdown('<div class="kpi-row">', unsafe_allow_html=True)
+col1, col2, col3, col4 = st.columns(4)
 
-# --- KPI 1: Savings Goal
-with st.container():
-    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-    pct = player["savings"] / fs["goal"] if fs["goal"] > 0 else 0
-    pct_capped = min(pct, 1.0)
-    st.markdown("###### 💸 Savings Goal")
-    st.caption(player["goal_desc"])
-    st.progress(pct_capped)
-    if pct >= 1:
-        st.markdown(f"**{format_currency(player['savings'])} / {format_currency(fs['goal'])}** 🎉 Goal reached!")
-    else:
+# --- Savings Goal
+with col1:
+    with st.container():
+        st.markdown('<div class="kpi-box">', unsafe_allow_html=True)
+        pct = player["savings"] / fs["goal"] if fs["goal"] > 0 else 0
+        st.markdown("##### 💸 Savings Goal")
+        st.caption(player["goal_desc"])
+        st.progress(min(pct, 1.0))
         st.markdown(f"**{format_currency(player['savings'])} / {format_currency(fs['goal'])}** ({int(pct*100)}%)")
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# --- KPI 2: Emergency Fund
-with st.container():
-    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-    st.markdown("###### 🛟 Emergency Fund")
-    st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
-    st.number_input(
-        "EF Allocation", min_value=0, max_value=remaining, value=int(player["allocation"]["ef"]),
-        step=50, key="ef_input", label_visibility="collapsed",
-        on_change=update_allocations, args=(None, int(player["allocation"]["ef"]))
-    )
-    st.caption(f"Cap: {format_currency(player['ef_cap'])}")
-    st.markdown('</div>', unsafe_allow_html=True)
+# --- Emergency Fund
+with col2:
+    with st.container():
+        st.markdown('<div class="kpi-box">', unsafe_allow_html=True)
+        st.markdown("##### 🛟 Emergency Fund")
+        st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
+        st.number_input("EF Allocation", min_value=0, max_value=remaining,
+                        value=int(player["allocation"]["ef"]), step=50,
+                        key="ef_input", label_visibility="collapsed",
+                        on_change=update_allocations, args=(None, int(player["allocation"]["ef"])))
+        st.caption(f"Cap: {format_currency(player['ef_cap'])}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# --- KPI 3: Wants Fund
-with st.container():
-    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-    st.markdown("###### 🎉 Wants Fund")
-    st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
-    st.number_input(
-        "Wants Allocation", min_value=0, max_value=remaining, value=int(player["allocation"]["wants"]),
-        step=50, key="wants_input", label_visibility="collapsed",
-        on_change=update_allocations, args=(int(player["allocation"]["wants"]), None)
-    )
-    st.caption(f"Monthly add: {format_currency(player['allocation']['wants'])}")
-    st.markdown('</div>', unsafe_allow_html=True)
+# --- Wants Fund
+with col3:
+    with st.container():
+        st.markdown('<div class="kpi-box">', unsafe_allow_html=True)
+        st.markdown("##### 🎉 Wants Fund")
+        st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
+        st.number_input("Wants Allocation", min_value=0, max_value=remaining,
+                        value=int(player["allocation"]["wants"]), step=50,
+                        key="wants_input", label_visibility="collapsed",
+                        on_change=update_allocations, args=(int(player["allocation"]["wants"]), None))
+        st.caption(f"Monthly add: {format_currency(player['allocation']['wants'])}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# --- KPI 4: Wellbeing / Time
-with st.container():
-    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-    st.markdown("###### ❤️⚡ Wellbeing / Time")
-    st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
-    st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
-    st.markdown('</div>', unsafe_allow_html=True)
+# --- Wellbeing / Time
+with col4:
+    with st.container():
+        st.markdown('<div class="kpi-box">', unsafe_allow_html=True)
+        st.markdown("##### ❤️⚡ Wellbeing / Time")
+        st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
+        st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------
-# Reflection if goal reached
+# Reflection Logic
 # -------------------------------
 if player["savings"] >= fs["goal"]:
     st.markdown("---")
-    st.markdown(
-        """
-        ### 🎉 Congratulations — You’ve Reached Your Savings Goal!
-        You’ve successfully balanced income, needs, and wellbeing for 12 months.  
-        Before moving on to investing, take a moment to reflect:
-        - What helped you reach your goal?
-        - What tradeoffs were hardest?
-        - How would you sustain this habit in real life?
-        """,
-    )
+    st.markdown("""
+    ### 🎉 Congratulations — You’ve Reached Your Savings Goal!
+    You’ve successfully balanced income, needs, and wellbeing for 12 months.  
+    Before moving on to investing, take a moment to reflect:
+    - What helped you reach your goal?
+    - What tradeoffs were hardest?
+    - How would you sustain this habit in real life?
+    """)
     st.stop()
 
 # -------------------------------
-# GAME AREA
+# Game Area
 # -------------------------------
 left_col, right_col = st.columns([2, 1], gap="large")
 
