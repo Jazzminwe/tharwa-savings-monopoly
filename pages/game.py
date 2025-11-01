@@ -23,6 +23,35 @@ if "player" not in st.session_state or "facilitator_settings" not in st.session_
 
 player = st.session_state.player
 fs = st.session_state.facilitator_settings
+
+# ---- Backfill / normalize player state (for older saves)
+player.setdefault("rounds_played", 0)
+player.setdefault("savings", 0)
+player.setdefault("emotion", 5)
+player.setdefault("time", 5)
+player.setdefault("decision_log", [])
+player.setdefault("current_card", None)
+player.setdefault("choice_made", False)
+player.setdefault("awaiting_round_start", False)
+
+# budgets & funds
+player.setdefault("income", fs.get("income", 0))
+player.setdefault("fixed_costs", fs.get("fixed_costs", 0))
+player.setdefault("ef_cap", player.get("ef_cap", 2000))
+player.setdefault("ef_balance", player.get("ef_balance", 0))
+player.setdefault("wants_balance", player.get("wants_balance", 0))
+
+# allocations
+player.setdefault("allocation", {})
+alloc = player["allocation"]
+remaining = max(0, player["income"] - player["fixed_costs"])
+alloc.setdefault("wants", alloc.get("wants", 0))
+alloc.setdefault("ef", alloc.get("ef", 0))
+alloc.setdefault("savings", max(0, remaining - alloc["wants"] - alloc["ef"]))
+
+# write back in case anything changed
+st.session_state.player = player
+
 st.set_page_config(layout="wide")
 
 # -------------------------------
