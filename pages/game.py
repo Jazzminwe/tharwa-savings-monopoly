@@ -14,6 +14,7 @@ def render_emoji_stat(value, emoji, max_value=10):
     empty = "▫️" * int(max_value - value)
     return f"{full}{empty} ({int(value)}/{max_value})"
 
+
 # -------------------------------
 # Setup
 # -------------------------------
@@ -28,13 +29,13 @@ st.set_page_config(layout="wide")
 st.markdown(
     """
     <style>
-    div.block-container {padding-top: 0.8rem;}
-    h3, h4, h5 {margin-bottom: 0.4rem;}
+    div.block-container {padding-top: 1.5rem;}
+    h3, h4, h5 {margin-bottom: 0.3rem;}
     .kpi-box {
-        background-color: #fafafa;
-        border-radius: 10px;
-        padding: 12px 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        background-color: #f8f8f8;
+        border-radius: 12px;
+        padding: 14px 16px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.08);
     }
     .small-label {color: #888; font-size: 0.85rem;}
     input[type=number] {
@@ -43,6 +44,10 @@ st.markdown(
         padding: 4px 8px;
         font-size: 0.9rem;
         width: 100%;
+    }
+    progress {
+        height: 6px;
+        border-radius: 4px;
     }
     </style>
     """,
@@ -57,32 +62,27 @@ if "life_cards" not in st.session_state:
         st.session_state.life_cards = json.load(f)
 
 # -------------------------------
-# Header (Row 1)
+# HEADER (Row 1)
 # -------------------------------
 col1, col2 = st.columns([3, 1])
-
 with col1:
-    st.markdown("<h3>💰 <b>Savings Monopoly</b></h3>", unsafe_allow_html=True)
-    st.caption(f"👤 {player['name']} — *{player['team']}*")
-
+    st.markdown("<h3 style='margin-bottom:0.2rem;'>💰 <b>Savings Monopoly</b></h3>", unsafe_allow_html=True)
 with col2:
     rounds_played = player["rounds_played"]
     total_rounds = fs["rounds"]
     progress = rounds_played / max(1, total_rounds)
     st.markdown(
         f"""
-        <div style="text-align:right;">
+        <div style="text-align:right; margin-top:0.3rem;">
             <span class="small-label">Rounds: {rounds_played}/{total_rounds}</span>
-            <progress value="{progress}" max="1" style="width:100%; height:8px; border-radius:6px;"></progress>
+            <progress value="{progress}" max="1" style="width:100%;"></progress>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-st.markdown("---")
-
 # -------------------------------
-# Auto contributions (post-round)
+# Auto Contributions
 # -------------------------------
 if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
     ef_add = player["allocation"]["ef"]
@@ -97,16 +97,14 @@ if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
     player["ef_balance"] += min(ef_add, max(0, player["ef_cap"] - player["ef_balance"]))
     player["savings"] += player["allocation"]["savings"]
     player["wants_balance"] += wants_add
-
     player["awaiting_round_start"] = False
     st.session_state.player = player
 
 # -------------------------------
-# Row 2 – Compact KPI Dashboard
+# Row 2 – KPI Dashboard
 # -------------------------------
 remaining = player["income"] - player["fixed_costs"]
 
-# define auto-update function for inline edits
 def update_allocations(new_wants=None, new_ef=None):
     if new_wants is not None:
         player["allocation"]["wants"] = new_wants
@@ -165,14 +163,11 @@ with kpi_col4:
     st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
     st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("---")
-
 # -------------------------------
 # Row 3 – Game Area
 # -------------------------------
 left_col, right_col = st.columns([2, 1], gap="large")
 
-# LEFT: Game play
 with left_col:
     st.markdown("<h5>🎴 Game Round</h5>", unsafe_allow_html=True)
     draw_disabled = player.get("current_card") is not None or player["rounds_played"] >= fs["rounds"]
@@ -221,12 +216,10 @@ with left_col:
                     delta_wellbeing = selected.get("wellbeing", 0)
                     delta_time = selected.get("time", 0)
 
-                    # Time exhaustion check
                     if player["time"] <= 0 and delta_time > 0:
                         st.warning("⏳ Not enough energy for this choice.")
                         st.stop()
 
-                    # Update wellbeing & time
                     player["emotion"] = max(0, min(10, player["emotion"] + delta_wellbeing))
                     player["time"] = max(0, min(10, player["time"] - delta_time))
 
@@ -234,7 +227,6 @@ with left_col:
                         st.error("💥 Burnout! Your wellbeing reached 0 — game over for you.")
                         st.stop()
 
-                    # Spending / income logic (simplified)
                     player["savings"] += delta_money
                     player["rounds_played"] += 1
                     player["decision_log"].append(f"{card['title']} — {choice}")
@@ -247,8 +239,8 @@ with left_col:
                     time.sleep(0.6)
                     st.rerun()
 
-# RIGHT: Locked info
 with right_col:
+    st.markdown(f"👤 **{player['name']}** — *{player['team']}*")
     st.markdown("<h5>💰 Budget Summary</h5>", unsafe_allow_html=True)
     st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
     st.markdown(f"**Fixed Costs:** {format_currency(player['fixed_costs'])}")
@@ -256,7 +248,7 @@ with right_col:
     st.markdown(f"**Savings Allocation (auto):** {format_currency(player['allocation']['savings'])}")
 
 # -------------------------------
-# Decision log
+# Decision Log (only divider here)
 # -------------------------------
 st.markdown("---")
 st.subheader("🧾 Decision Log")
