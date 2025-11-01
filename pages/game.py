@@ -7,7 +7,7 @@ import time
 # Helper functions
 # -------------------------------
 def format_currency(value):
-    return f"SAR {value:,}"
+    return f"SAR {int(value):,}"
 
 def render_emoji_stat(value, emoji, max_value=10):
     full = emoji * int(value)
@@ -29,14 +29,18 @@ st.set_page_config(layout="wide")
 st.title("💰 Savings Monopoly")
 
 # -------------------------------
-# Load life cards once
+# Load life cards
 # -------------------------------
 if "life_cards" not in st.session_state:
     with open("data/life_cards.json", "r") as f:
         st.session_state.life_cards = json.load(f)
 
+# Initialize wants fund if missing
+if "wants_balance" not in player:
+    player["wants_balance"] = 0
+
 # -------------------------------
-# Emergency Fund full popup (modal)
+# Emergency Fund full popup
 # -------------------------------
 if player.get("ef_full_alert", False):
     st.markdown("## 🚨 Emergency Fund Full")
@@ -45,9 +49,8 @@ if player.get("ef_full_alert", False):
         f"Current: {format_currency(player['ef_balance'])}.\n\n"
         "Future EF contributions won't fit. Redirect EF to Savings Goal?"
     )
-
-    col1, col2 = st.columns(2)
-    with col1:
+    c1, c2 = st.columns(2)
+    with c1:
         if st.button("✅ Redirect EF contribution to Savings Goal"):
             moved = player["allocation"]["ef"]
             player["allocation"]["savings"] += moved
@@ -55,32 +58,31 @@ if player.get("ef_full_alert", False):
             player["ef_full_alert"] = False
             st.session_state.player = player
             st.rerun()
-
-    with col2:
+    with c2:
         if st.button("✖️ Keep EF as is"):
             player["ef_full_alert"] = False
             st.session_state.player = player
             st.rerun()
-
-    st.stop()  # Block rest of UI until user responds
+    st.stop()
 
 # -------------------------------
-# Apply automatic contributions (only after first round)
+# Automatic contributions after each round (but not before round 1)
 # -------------------------------
 if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
+    # Add allocations
     ef_add = player["allocation"]["ef"]
+    wants_add = player["allocation"]["wants"]
     projected = player["ef_balance"] + ef_add
 
-    # EF full check before adding
     if ef_add > 0 and projected >= player["ef_cap"] and not player.get("ef_full_alert", False):
         player["ef_full_alert"] = True
         st.session_state.player = player
         st.rerun()
 
-    room = max(0, player["ef_cap"] - player["ef_balance"])
-    to_add = min(room, ef_add)
-    player["ef_balance"] += to_add
+    # Add to EF, savings, wants
+    player["ef_balance"] += min(ef_add, max(0, player["ef_cap"] - player["ef_balance"]))
     player["savings"] += player["allocation"]["savings"]
+    player["wants_balance"] += wants_add
 
     player["awaiting_round_start"] = False
     st.session_state.player = player
@@ -98,14 +100,16 @@ with left_col:
     st.progress(progress_fraction)
     st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
 
-    # Define allowed card types by round
-    def allowed_types(round_idx):
+    # Allowed card types based on round & progress
+    def allowed_types(round_idx, player):
         base = ["positive", "neutral", "negative_type_1"]
         if round_idx >= 4:
             base.append("negative_type_2")
+        if player["savings"] >= fs["goal"] * 0.6:
+            base.append("temptation")
         return base
 
-    # Draw button logic
+    # Draw button
     game_over = player["rounds_played"] >= fs["rounds"]
     draw_disabled = player.get("current_card") is not None or game_over
 
@@ -115,13 +119,11 @@ with left_col:
     draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
 
     if draw and not draw_disabled:
-        permitted = allowed_types(player["rounds_played"] + 1)
+        permitted = allowed_types(player["rounds_played"] + 1, player)
         pool = [c for c in st.session_state.life_cards if c.get("type") in permitted]
-
         if not pool:
             st.error(f"No life cards available for round type(s): {permitted}. Please check life_cards.json.")
             st.stop()
-
         player["current_card"] = random.choice(pool)
         player["choice_made"] = False
         st.session_state.player = player
@@ -148,14 +150,44 @@ with left_col:
             if st.button("💾 Save Decision", key="save_decision"):
                 if not player.get("choice_made"):
                     selected = card["options"][options.index(choice)]
-
-                    # Apply wellbeing and time
-                    player["emotion"] = max(0, min(10, player["emotion"] + selected.get("wellbeing", 0)))
-                    player["time"] = max(0, min(10, player["time"] - selected.get("time", 0)))
-
-                    # Apply money logic (with EF protection for eligible cards)
                     delta_money = selected.get("money", 0)
-                    if card.get("ef_eligible", False) and delta_money < 0:
+                    delta_wellbeing = selected.get("wellbeing", 0)
+                    delta_time = selected.get("time", 0)
+
+                    # Time exhaustion check
+                    if player["time"] <= 0 and delta_time > 0:
+                        st.warning("⏳ You don’t have enough energy for this choice — it won’t be applied.")
+                        st.stop()
+
+                    # Apply wellbeing and time changes
+                    old_emotion = player["emotion"]
+                    player["emotion"] = max(0, min(10, old_emotion + delta_wellbeing))
+                    player["time"] = max(0, min(10, player["time"] - delta_time))
+
+                    # Check burnout
+                    if player["emotion"] <= 0:
+                        st.error("💥 Burnout! Your wellbeing reached 0 — you’ve burned out and can’t continue.")
+                        st.markdown("Return to the group screen to discuss your results.")
+                        st.stop()
+
+                    # Handle money effects
+                    if delta_money < 0 and delta_wellbeing > 0:
+                        # Wellbeing expense (Wants)
+                        cost = abs(delta_money)
+                        if cost <= player["wants_balance"]:
+                            player["wants_balance"] -= cost
+                        else:
+                            shortfall = cost - player["wants_balance"]
+                            st.warning(
+                                f"You only have {format_currency(player['wants_balance'])} in your Wants fund. "
+                                f"The remaining {format_currency(shortfall)} will be deducted from your Savings Goal."
+                            )
+                            if st.button("Acknowledge and Continue"):
+                                player["wants_balance"] = 0
+                                player["savings"] -= shortfall
+                            st.stop()
+                    elif card.get("ef_eligible", False) and delta_money < 0:
+                        # Emergency fund eligible event
                         need = abs(delta_money)
                         cover = min(player["ef_balance"], need)
                         player["ef_balance"] -= cover
@@ -168,7 +200,6 @@ with left_col:
                     player["decision_log"].append(f"{card['title']} — {choice}")
                     player["choice_made"] = True
                     player["current_card"] = None
-
                     if player["rounds_played"] < fs["rounds"]:
                         player["awaiting_round_start"] = True
 
@@ -217,6 +248,9 @@ with right_col:
     st.markdown("### 🛟 Emergency Fund")
     st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
     st.markdown(f"**Cap:** {format_currency(player['ef_cap'])}")
+    st.markdown("---")
+    st.markdown("### 🎉 Wants Fund")
+    st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
 
 # -------------------------------
 # Decision log
