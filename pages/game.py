@@ -30,23 +30,24 @@ fs = st.session_state.facilitator_settings
 st.set_page_config(layout="wide")
 st.title("🎲 Draw Life Card")
 
-game_col, stats_col = st.columns([1.2, 1])
+game_col, stats_col = st.columns([1.2, 1], gap="large")
 
 # -------------------------------
 # Left column — Life card logic
 # -------------------------------
 with game_col:
-    st.header("Draw Life Card")
-    st.progress(player["rounds_played"] / fs["rounds"])
-    st.write(f"**Rounds Played:** {player['rounds_played']}/{fs['rounds']}")
+    st.markdown("### 🎴 Draw Life Card")
+
+    progress_value = player["rounds_played"] / fs["rounds"]
+    st.progress(progress_value)
+    st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
+    st.write(" ")
 
     if "life_cards" not in st.session_state:
         with open("data/life_cards.json", "r") as f:
             st.session_state.life_cards = json.load(f)
 
-    if st.button("Draw Life Card"):
-        player["current_card"] = random.choice(st.session_state.life_cards)
-        st.session_state.player = player
+    st.button("Draw Life Card", type="primary")
 
     if player.get("current_card"):
         card = player["current_card"]
@@ -70,33 +71,56 @@ with game_col:
 # Right column — Player stats
 # -------------------------------
 with stats_col:
-    st.subheader(player["name"])
-    st.caption(player["team"])
+    st.markdown("### 🧍 Player Overview")
 
-    st.markdown(f"**Savings Goal:** {player['goal_desc']}")
-    st.markdown(f"**Current Savings:** {format_currency(player['savings'])} "
-                f"({int((player['savings'] / max(1, fs['goal'])) * 100)}%)")
-    st.progress(player["savings"] / fs["goal"])
+    # Card-style box
+    with st.container():
+        st.markdown(
+            """
+            <style>
+                div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stHorizontalBlock"]) {
+                    background-color: #ffffff;
+                    padding: 20px 25px 25px 25px;
+                    border-radius: 18px;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+                    margin-bottom: 1.5rem;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    st.write(f"**Energy:** {render_emoji_stat(player['time'], '⚡')}")
-    st.write(f"**Well-being:** {render_emoji_stat(player['emotion'], '❤️')}")
+        st.markdown(f"#### {player['name']}")
+        st.caption(player["team"])
 
-    st.divider()
-    st.write(f"**Monthly Income:** {format_currency(player['income'])}")
-    st.write(f"**Fixed Expenses:** {format_currency(player['fixed_costs'])}")
+        st.markdown(f"**Savings Goal:** {player['goal_desc']}")
+        st.markdown(
+            f"**Current Savings:** {format_currency(player['savings'])} "
+            f"({int((player['savings'] / max(1, fs['goal'])) * 100)}%)"
+        )
+        st.progress(player["savings"] / fs["goal"])
 
-    remaining = player["income"] - player["fixed_costs"]
-    wants_val = player["allocation"]["wants"]
-    savings_val = player["allocation"]["savings"]
-    total = wants_val + savings_val
+        # Energy and Well-being
+        st.write(f"**Energy:** {render_emoji_stat(player['time'], '⚡')}")
+        st.write(f"**Well-being:** {render_emoji_stat(player['emotion'], '❤️')}")
 
-    st.markdown(f"**Remaining Budget:** {format_currency(remaining)}")
+        st.divider()
 
-    # Budget allocation section
+        # Budget information
+        remaining = player["income"] - player["fixed_costs"]
+        wants_val = player["allocation"]["wants"]
+        savings_val = player["allocation"]["savings"]
+        total = wants_val + savings_val
+
+        st.write(f"**Monthly Income:** {format_currency(player['income'])}")
+        st.write(f"**Fixed Expenses:** {format_currency(player['fixed_costs'])}")
+        st.markdown(f"**Remaining Budget:** {format_currency(remaining)}")
+
+    # Budget allocation block
     st.markdown("### 💰 Budget Allocation")
-    st.caption("Adjust your monthly distribution")
+    st.caption("Adjust your monthly distribution below:")
 
-    col1, col2, col3 = st.columns([1, 1, 0.5])
+    col1, col2, col3 = st.columns([1, 1, 0.6])
     with col1:
         new_wants = st.number_input("Wants (SAR)", min_value=0, max_value=remaining, value=wants_val, step=50)
     with col2:
@@ -112,10 +136,10 @@ with stats_col:
             player["allocation"]["wants"] = new_wants
             player["allocation"]["savings"] = new_savings
             st.session_state.player = player
-            st.success("Budget updated!")
+            st.success("✅ Budget updated!")
 
 # -------------------------------
-# Decision log at the bottom
+# Decision log
 # -------------------------------
 st.divider()
 st.subheader("🧾 Decision Log")
