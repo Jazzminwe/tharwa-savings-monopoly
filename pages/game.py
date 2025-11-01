@@ -46,7 +46,7 @@ p.setdefault("wants_balance", 0)
 p.setdefault("allocation", {"savings": 0, "ef": 0, "wants": 0})
 
 # -------------------------------------------------
-# CSS (respect hierarchy)
+# Style
 # -------------------------------------------------
 st.markdown("""
 <style>
@@ -54,32 +54,47 @@ div.block-container {
   max-width: 1280px;
   padding-top: 2rem;
 }
+
+/* Header layout */
 .header-row {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 1rem;
+  align-items: center;
+  margin-bottom: 1.2rem;
 }
 .header-title {
-  font-size: 1.2rem; /* small and understated header */
+  font-size: 1.8rem; /* larger title */
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.2;
 }
 .rounds {
   text-align: right;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  margin-top: 0.3rem;
 }
 .rounds progress {
-  width: 140px;
-  height: 6px;
-  border-radius: 3px;
+  width: 160px;
+  height: 8px;
+  border-radius: 4px;
   accent-color: #1f6feb;
   margin-top: 4px;
 }
-h3, h4 {
-  font-size: 1rem !important;
-  font-weight: 700 !important;
-  margin-bottom: 0.4rem !important;
+
+/* Hierarchy: KPI vs. section */
+h4 { font-size: 1rem !important; font-weight: 700 !important; }
+.section-title { font-size: 1.1rem; font-weight: 750; margin-top: 1rem; }
+
+/* Columns */
+div[data-testid="column"] { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+
+/* Inputs */
+div[data-testid="stNumberInput"] > div { width: 100% !important; }
+div[data-testid="stNumberInput"] input { width: 100% !important; font-size: 0.9rem; }
+
+/* Progress bar */
+.stProgress > div > div {
+  height: 6px !important;
+  border-radius: 3px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -95,14 +110,14 @@ st.markdown(f"""
 <div class="header-row">
   <div class="header-title">💰 Savings Monopoly</div>
   <div class="rounds">
-    <b>Rounds:</b> {rp}/{tr}<br>
-    <progress value="{pct_rounds}" max="1"></progress>
+    <b>Game Progress:</b> {rp}/{tr}
+    <br><progress value="{pct_rounds}" max="1"></progress>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# Budget Overview + Allocations
+# KPI Row
 # -------------------------------------------------
 remaining = int(p["income"] - p["fixed_costs"])
 k1, k2, k3, k4 = st.columns(4, gap="small")
@@ -140,16 +155,14 @@ with k4:
     )
 
 # -------------------------------------------------
-# Logic Helpers
+# Game Logic
 # -------------------------------------------------
 def apply_monthly_income(p):
-    """Distribute income across funds at start of round."""
     p["ef_balance"] = min(p["ef_cap"], p["ef_balance"] + p["allocation"]["ef"])
     p["wants_balance"] += p["allocation"]["wants"]
     p["savings"] += p["allocation"]["savings"]
 
 def apply_card_effects(p, selected):
-    """Apply life card effects to funds, time, and wellbeing."""
     money = selected.get("money", 0)
     wellbeing = selected.get("wellbeing", 0)
     time_cost = selected.get("time", 0)
@@ -174,7 +187,6 @@ def apply_card_effects(p, selected):
     p["time"] -= time_cost
 
 def end_popup(msg, success=False):
-    """Popup shown at the end of game."""
     if success:
         st.success(msg)
     else:
@@ -186,29 +198,27 @@ def end_popup(msg, success=False):
     st.stop()
 
 # -------------------------------------------------
-# Game Section
+# Game Round + Stats
 # -------------------------------------------------
-left, right = st.columns([2, 1])
+left, right = st.columns([2, 1], gap="large")
 
 with left:
-    st.markdown("### 🎴 Game Round")
+    st.markdown('<div class="section-title">🎴 Game Round</div>', unsafe_allow_html=True)
 
-    # Early termination checks
     if p["emotion"] <= 0:
         end_popup("💥 You burned out! Game over.", success=False)
     if p["savings"] >= fs.get("goal", 5000):
-        end_popup("🎉 You reached your savings goal early! Excellent financial planning.", success=True)
+        end_popup("🎉 You reached your savings goal early! Great job.", success=True)
     if p["time"] <= 0:
         p["emotion"] = max(0, p["emotion"] - 2)
         p["time"] = 3
-        st.warning("⏳ You ran out of time energy. -2 wellbeing, time reset to 3.")
+        st.warning("⏳ You ran out of time. -2 wellbeing, time reset to 3.")
 
-    # End of game popup (all rounds played)
     if p["rounds_played"] >= tr:
         if p["savings"] >= fs.get("goal", 5000):
-            end_popup("🏆 The game has ended — you reached your savings goal. Well done!", success=True)
+            end_popup("🏆 The game ended — you achieved your goal! 🥳", success=True)
         else:
-            end_popup(f"⏰ The game has ended after {tr} rounds — you didn’t reach your goal yet. Reflect and try again!", success=False)
+            end_popup(f"⏰ The game ended after {tr} rounds — goal not reached. Try again!", success=False)
 
     draw_disabled = bool(p.get("current_card") or p["rounds_played"] >= tr)
     draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
@@ -241,22 +251,20 @@ with left:
         if st.button("💾 Save Decision", key="save_decision"):
             selected = options[display_opts.index(choice)]
             apply_card_effects(p, selected)
-
             p["rounds_played"] += 1
             p["decision_log"].append(f"{card['title']} — {choice}")
             p["choice_made"] = True
             p["current_card"] = None
             st.session_state.player = p
-
             st.success("✅ Decision saved! Next round starting...")
             time.sleep(0.4)
             st.rerun()
 
 with right:
-    st.markdown("#### 📈 Game Progress")
+    st.markdown('<div class="section-title">📈 Game Progress</div>', unsafe_allow_html=True)
     st.markdown(f"**Rounds:** {rp}/{tr}")
     st.progress(pct_rounds)
-    st.markdown("#### ❤️⚡ Wellbeing / Time")
+    st.markdown('<div class="section-title">❤️⚡ Wellbeing / Time</div>', unsafe_allow_html=True)
     st.markdown(f"**Wellbeing:** {emoji_bar(p['emotion'], '❤️')}")
     st.markdown(f"**Time:** {emoji_bar(p['time'], '⚡')}")
 
