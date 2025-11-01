@@ -21,7 +21,7 @@ def team_color(team):
         "Nova": "#FDD835",
         "Orion": "#FB8C00",
     }
-    return palette.get(team, "#6366F1")  # default indigo
+    return palette.get(team, "#6366F1")
 
 
 # -------------------------------
@@ -36,7 +36,7 @@ fs = st.session_state.facilitator_settings
 
 st.set_page_config(layout="wide")
 st.title("🎲 Draw Life Card")
-st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)  # soft space only, no line
+st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)  # small space, no divider
 
 # -------------------------------
 # Layout columns
@@ -47,21 +47,6 @@ left_col, right_col = st.columns([1.2, 1], gap="large")
 # 🎴 LEFT: Game Area
 # -------------------------------
 with left_col:
-    # Style wrapper for left box
-    st.markdown("""
-        <style>
-        .game-box {
-            background-color: #ffffff;
-            border-radius: 18px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.07);
-            padding: 25px 30px;
-            margin-bottom: 1.5rem;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="game-box">', unsafe_allow_html=True)
-
     # --- Button and progress
     draw = st.button("🎴 Draw Life Card", type="primary")
     st.progress(player["rounds_played"] / fs["rounds"])
@@ -85,7 +70,7 @@ with left_col:
     else:
         card = player["current_card"]
         title = card.get("title", "Life Event")
-        desc = card.get("description", "No description provided.")
+        desc = card.get("description", "")
         st.subheader(title)
         if desc:
             st.write(desc)
@@ -120,39 +105,25 @@ with left_col:
         else:
             st.warning("⚠️ This card has no available options.")
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
 
 # -------------------------------
 # 🧍 RIGHT: Player Stats Card
 # -------------------------------
 with right_col:
-    color = team_color(player["team"])
-    st.markdown(f"""
+    st.markdown("""
         <style>
-        .player-card {{
+        .player-card {
             background-color: #ffffff;
             border-radius: 18px;
             box-shadow: 0 6px 18px rgba(0,0,0,0.07);
             padding: 25px 30px;
             margin-top: 0.3rem;
-            position: relative;
-        }}
-        .player-card::before {{
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 8px;
-            border-top-left-radius: 18px;
-            border-top-right-radius: 18px;
-            background-color: {color};
-        }}
+        }
         </style>
         <div class="player-card">
     """, unsafe_allow_html=True)
 
+    # Player info
     st.markdown(f"### 🧍 {player['name']}")
     st.caption(f"Team: {player['team']}")
     st.write(" ")
