@@ -144,9 +144,9 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# KPI ROW (in proper 3D boxes)
+# KPI ROW (3D boxes)
 # -------------------------------------------------
-remaining = player["income"] - player["fixed_costs"]
+remaining = int(player["income"] - player["fixed_costs"])
 k1, k2, k3, k4 = st.columns(4, gap="small")
 
 with k1:
@@ -164,21 +164,42 @@ with k2:
     pct = (savings_value / goal_value) if goal_value else 0.0
     st.progress(min(1.0, pct))
     st.markdown(f"**{format_currency(savings_value)} / {format_currency(goal_value)}** ({int(pct * 100)}%)")
-    player["allocation"]["savings"] = st.number_input("Monthly allocation:", 0, remaining, player["allocation"]["savings"], 50)
+    player["allocation"]["savings"] = st.number_input(
+        "Monthly allocation:",
+        0,
+        remaining,
+        player["allocation"]["savings"],
+        50,
+        key="alloc_savings"
+    )
 
 with k3:
     st.markdown('<span class="marker"></span>', unsafe_allow_html=True)
     st.markdown("#### 🛟 Emergency Fund")
     st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
     st.caption(f"Cap: {format_currency(player['ef_cap'])}")
-    player["allocation"]["ef"] = st.number_input("Monthly allocation:", 0, remaining, player["allocation"]["ef"], 50)
+    player["allocation"]["ef"] = st.number_input(
+        "Monthly allocation:",
+        0,
+        remaining,
+        player["allocation"]["ef"],
+        50,
+        key="alloc_ef"
+    )
 
 with k4:
     st.markdown('<span class="marker"></span>', unsafe_allow_html=True)
     st.markdown("#### 🎉 Wants Fund")
     st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
     st.caption("Cap: None")
-    player["allocation"]["wants"] = st.number_input("Monthly allocation:", 0, remaining, player["allocation"]["wants"], 50)
+    player["allocation"]["wants"] = st.number_input(
+        "Monthly allocation:",
+        0,
+        remaining,
+        player["allocation"]["wants"],
+        50,
+        key="alloc_wants"
+    )
 
 st.session_state.player = player
 
