@@ -14,15 +14,6 @@ def render_emoji_stat(value, emoji, max_value=10):
     empty = "▫️" * int(max_value - value)
     return f"{full}{empty} ({int(value)}/{max_value})"
 
-def team_color(team):
-    palette = {
-        "Thuraya": "#1E88E5",
-        "Horizon": "#43A047",
-        "Nova": "#FDD835",
-        "Orion": "#FB8C00",
-    }
-    return palette.get(team, "#6366F1")
-
 
 # -------------------------------
 # Setup
@@ -35,8 +26,8 @@ player = st.session_state.player
 fs = st.session_state.facilitator_settings
 
 st.set_page_config(layout="wide")
-st.title("🎲 Draw Life Card")
-st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)  # small space, no divider
+st.title("💰 Savings Monopoly")
+st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
 
 # -------------------------------
 # Layout columns
@@ -47,9 +38,36 @@ left_col, right_col = st.columns([1.2, 1], gap="large")
 # 🎴 LEFT: Game Area
 # -------------------------------
 with left_col:
-    # --- Button and progress
-    draw = st.button("🎴 Draw Life Card", type="primary")
-    st.progress(player["rounds_played"] / fs["rounds"])
+    # --- Box style for game area
+    st.markdown("""
+        <style>
+        .game-box {
+            background-color: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.07);
+            padding: 25px 30px;
+            margin-bottom: 1.5rem;
+        }
+        .progress-bar {
+            width: 80%;
+            margin-top: 0.3rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="game-box">', unsafe_allow_html=True)
+
+    # --- Button: disabled if card already active
+    draw_disabled = player.get("current_card") is not None
+    draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
+
+    # --- Progress bar
+    progress_fraction = player["rounds_played"] / fs["rounds"]
+    st.markdown(f"""
+        <div class="progress-bar">
+            <progress value="{progress_fraction}" max="1" style="width:100%; height:8px; border-radius:4px;"></progress>
+        </div>
+    """, unsafe_allow_html=True)
     st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
     st.write(" ")
 
@@ -58,8 +76,8 @@ with left_col:
         with open("data/life_cards.json", "r") as f:
             st.session_state.life_cards = json.load(f)
 
-    # Draw new card
-    if draw:
+    # Draw new card (only if allowed)
+    if draw and not draw_disabled:
         player["current_card"] = random.choice(st.session_state.life_cards)
         player["choice_made"] = False
         st.session_state.player = player
@@ -97,13 +115,15 @@ with left_col:
                     player["rounds_played"] += 1
                     player["decision_log"].append(choice)
                     player["choice_made"] = True
-                    player["current_card"] = None  # clear game pane
+                    player["current_card"] = None  # clear card to allow next draw
                     st.session_state.player = player
                     st.success("✅ Decision saved! Stats updated.")
                     time.sleep(0.8)
                     st.rerun()
         else:
             st.warning("⚠️ This card has no available options.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # -------------------------------
@@ -123,7 +143,6 @@ with right_col:
         <div class="player-card">
     """, unsafe_allow_html=True)
 
-    # Player info
     st.markdown(f"### 🧍 {player['name']}")
     st.caption(f"Team: {player['team']}")
     st.write(" ")
