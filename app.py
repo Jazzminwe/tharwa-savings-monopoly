@@ -83,4 +83,4 @@ with st.form("create_player_form"):
                 "decision_log": [],
             }
             st.success(f"✅ Player {name} created! Redirecting to game...")
-            st.switch_page("pages/game.py")
+            st.switch_page("game")

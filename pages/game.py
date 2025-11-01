@@ -61,7 +61,7 @@ with game_col:
     if player["rounds_played"] >= fs["rounds"]:
         st.success("✅ All rounds complete!")
         if st.button("🎉 View Results"):
-            st.switch_page("pages/results.py")
+            st.switch_page("results")
         st.stop()
 
     st.markdown("## 🎴 Draw Life Card")

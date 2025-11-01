@@ -24,4 +24,4 @@ st.markdown(f"**Final Well-being:** {player['emotion']} ❤️")
 st.info("📊 A summary or leaderboard for all players can go here later.")
 
 if st.button("🔙 Back to Setup"):
-    st.switch_page("app.py")
+    st.switch_page("app")
