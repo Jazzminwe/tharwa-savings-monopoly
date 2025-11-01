@@ -18,7 +18,6 @@ def render_emoji_stat(value, emoji, max_value=10):
     empty = "▫️" * (max_value - v)
     return f"{full}{empty} ({v}/{max_value})"
 
-
 # -------------------------------
 # Ensure session data exists
 # -------------------------------
@@ -56,17 +55,33 @@ st.session_state.player = player
 st.set_page_config(layout="wide")
 
 # -------------------------------
-# Styling: only KPI cards boxed
+# Styling
 # -------------------------------
 st.markdown("""
 <style>
-div.block-container { padding-top: 1rem !important; }
+div.block-container { padding-top: 0.5rem !important; }
+
+/* Header layout */
+.header-row {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+.header-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+.rounds {
+    text-align: right;
+    font-size: 0.95rem;
+}
 
 /* KPI cards only */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) {
     background: #ffffff;
     border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
     padding: 14px 18px;
     height: 100%;
 }
@@ -79,23 +94,36 @@ div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
     font-weight: 600;
 }
 
-/* Column gap and progress bar styling */
+/* Columns & spacing */
 div[data-testid="column"] { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
 .stProgress > div > div { height: 6px !important; border-radius: 4px !important; }
+
+/* Remove any global white wrapper effect */
+section.main > div:nth-child(1) {
+    background: none !important;
+    box-shadow: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------
 # Header
 # -------------------------------
-left_h, right_h = st.columns([4, 1])
-with left_h:
-    st.markdown("## 💰 Savings Monopoly")
-with right_h:
-    rp = player["rounds_played"]
-    tr = fs.get("rounds", 12)
-    st.write(f"**Rounds:** {rp}/{tr}")
-    st.progress(min(1.0, max(0.0, float(rp) / max(1, float(tr)))))
+rp = player["rounds_played"]
+tr = fs.get("rounds", 12)
+pct_rounds = min(1.0, max(0.0, float(rp) / max(1, float(tr))))
+
+st.markdown(f"""
+<div class="header-row">
+    <div class="header-title">💰 Savings Monopoly</div>
+    <div class="rounds">
+        <b>Rounds:</b> {rp}/{tr}
+        <div style="width:120px; margin-top:3px;">
+            <progress value="{pct_rounds}" max="1" style="width:100%; height:6px;"></progress>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # -------------------------------
 # KPI Row
@@ -186,7 +214,7 @@ if player["savings"] >= fs.get("goal", 0) and fs.get("goal", 0) > 0:
     st.stop()
 
 # -------------------------------
-# Game + Simplified Budget Overview
+# Game + Budget Overview
 # -------------------------------
 left_col, right_col = st.columns([2, 1], gap="large")
 
@@ -264,7 +292,7 @@ with left_col:
                     time.sleep(0.5)
                     st.rerun()
 
-# --- Simplified Budget Overview
+# --- Budget Overview
 with right_col:
     st.markdown("### 💰 Budget Overview")
     st.markdown(f"**{player.get('name','')}** <span style='color:#888;'>({player.get('team','')})</span>", unsafe_allow_html=True)
