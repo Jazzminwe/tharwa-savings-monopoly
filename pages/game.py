@@ -28,6 +28,7 @@ if "player" not in st.session_state or "facilitator_settings" not in st.session_
 player = st.session_state.player
 fs = st.session_state.facilitator_settings
 
+# Initialize defaults
 player.setdefault("rounds_played", 0)
 player.setdefault("savings", 0)
 player.setdefault("emotion", 5)
@@ -35,99 +36,75 @@ player.setdefault("time", 5)
 player.setdefault("decision_log", [])
 player.setdefault("current_card", None)
 player.setdefault("choice_made", False)
-player.setdefault("income", fs.get("income", 0))
-player.setdefault("fixed_costs", fs.get("fixed_costs", 0))
-player.setdefault("ef_cap", player.get("ef_cap", 2000))
+player.setdefault("income", fs.get("income", 2000))
+player.setdefault("fixed_costs", fs.get("fixed_costs", 1000))
+player.setdefault("ef_cap", player.get("ef_cap", 3000))
 player.setdefault("ef_balance", player.get("ef_balance", 0))
 player.setdefault("wants_balance", player.get("wants_balance", 0))
 player.setdefault("name", player.get("name", ""))
 player.setdefault("team", player.get("team", ""))
 
-player.setdefault("allocation", {})
-alloc = player["allocation"]
-remaining = max(0, player["income"] - player["fixed_costs"])
-alloc.setdefault("wants", alloc.get("wants", 0))
-alloc.setdefault("ef", alloc.get("ef", 0))
-alloc.setdefault("savings", max(0, remaining - alloc["wants"] - alloc["ef"]))
-st.session_state.player = player
-
 st.set_page_config(layout="wide")
 
 # -------------------------------
-# Styling (FINAL FIXED)
+# Styling
 # -------------------------------
 st.markdown("""
 <style>
-/* remove padding and background wrappers */
-div.block-container {
-    padding-top: 0rem !important;
-}
-section.main {
+html, body, section.main, div.block-container {
     background: transparent !important;
-}
-section.main > div:first-child {
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
     padding: 0 !important;
     margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 section.main div[data-testid="stVerticalBlockBorderWrapper"] {
     background: transparent !important;
     box-shadow: none !important;
 }
 
-/* header styling */
+/* header */
 .header-row {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-bottom: 1.2rem;
-    padding: 0 0.5rem;
+    padding: 0.3rem 0.6rem 0.8rem 0.6rem;
 }
 .header-title {
     font-size: 2rem;
     font-weight: 800;
-    line-height: 1.1;
     margin: 0;
 }
 .rounds {
     text-align: right;
     font-size: 0.95rem;
-    margin-bottom: 0;
 }
 .rounds progress {
-    width: 140px;
+    width: 160px;
     height: 6px;
     border-radius: 3px;
     accent-color: #007bff;
     margin-top: 4px;
 }
 
-/* KPI boxes only */
+/* KPI boxes */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) {
-    background: #fff !important;
+    background: #ffffff !important;
     border-radius: 18px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     padding: 18px 20px !important;
     height: 100%;
 }
-
-/* smaller headings in KPI */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h4,
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
     font-size: 1rem !important;
-    margin-bottom: 6px !important;
     font-weight: 600;
+    margin-bottom: 6px !important;
 }
-
-/* progress bars */
 .stProgress > div > div {
     height: 6px !important;
     border-radius: 3px !important;
 }
-
-/* compact columns */
 div[data-testid="column"] {
     padding-left: 0.4rem !important;
     padding-right: 0.4rem !important;
@@ -152,86 +129,53 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-
 # -------------------------------
-# KPI Row
+# KPI ROW
 # -------------------------------
 remaining = player["income"] - player["fixed_costs"]
 
-def update_allocations(new_wants=None, new_ef=None):
-    if new_wants is not None:
-        player["allocation"]["wants"] = int(new_wants)
-    if new_ef is not None:
-        player["allocation"]["ef"] = int(new_ef)
-    total_alloc = player["allocation"]["wants"] + player["allocation"]["ef"]
-    if total_alloc > remaining:
-        st.warning("⚠️ Allocations exceed remaining budget.")
-        return
-    player["allocation"]["savings"] = max(0, remaining - total_alloc)
-    st.session_state.player = player
-    st.toast("✅ Budget updated!")
+col1, col2, col3, col4 = st.columns(4, gap="small")
 
-k1, k2, k3, k4 = st.columns(4, gap="small")
-
-# --- Savings Goal
-with k1:
+# --- 1. Budget Overview ---
+with col1:
     st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
-    st.markdown("#### 💸 Savings Goal")
-    st.caption(player.get("goal_desc", ""))
+    st.markdown("#### 💰 Budget Overview")
+    st.markdown(f"**Team:** {player.get('team', '')}  <span style='color:#888;'>( {player.get('name','')} )</span>", unsafe_allow_html=True)
+    st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
+    st.markdown(f"**Fixed Costs:** {format_currency(player['fixed_costs'])}")
+    st.markdown(f"**Remaining:** {format_currency(remaining)}")
 
-    goal_value = fs.get("goal", 0)
+# --- 2. Savings Goal ---
+with col2:
+    st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
+    st.markdown("#### 🎯 Savings Goal")
+    st.caption(player.get("goal_desc", ""))
+    goal_value = fs.get("goal", 5000)
     savings_value = player.get("savings", 0)
     pct = max(0.0, min(1.0, float(savings_value) / float(goal_value))) if goal_value else 0.0
-
     st.progress(pct)
     st.markdown(f"**{format_currency(savings_value)} / {format_currency(goal_value)}** ({int(pct * 100)}%)")
 
-# --- Emergency Fund
-with k2:
+# --- 3. Emergency Fund ---
+with col3:
     st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
     st.markdown("#### 🛟 Emergency Fund")
     st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
-    new_ef = st.number_input(
-        "EF Allocation",
-        min_value=0, max_value=remaining, value=int(player['allocation']['ef']),
-        step=50, label_visibility="collapsed", key="ef_allocation"
-    )
-    if new_ef != player["allocation"]["ef"]:
-        update_allocations(new_ef=new_ef)
     st.caption(f"Cap: {format_currency(player['ef_cap'])}")
 
-# --- Wants Fund
-with k3:
+# --- 4. Wants Fund ---
+with col4:
     st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
     st.markdown("#### 🎉 Wants Fund")
     st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
-    new_wants = st.number_input(
-        "Wants Allocation",
-        min_value=0, max_value=remaining, value=int(player['allocation']['wants']),
-        step=50, label_visibility="collapsed", key="wants_allocation"
-    )
-    if new_wants != player["allocation"]["wants"]:
-        update_allocations(new_wants=new_wants)
-    st.caption(f"Monthly add: {format_currency(player['allocation']['wants'])}")
-
-# --- Wellbeing / Time
-with k4:
-    st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
-    st.markdown("#### ❤️⚡ Wellbeing / Time")
-    st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
-    st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
+    st.caption(f"Monthly add: {format_currency(333)}")
 
 # -------------------------------
-# Game logic
+# GAME LOGIC
 # -------------------------------
-if player["savings"] >= fs.get("goal", 0) and fs.get("goal", 0) > 0:
-    st.markdown("---")
-    st.markdown("### 🎉 You’ve reached your goal! Reflect before investing next.")
-    st.stop()
+left, right = st.columns([2, 1], gap="large")
 
-left_col, right_col = st.columns([2, 1], gap="large")
-
-with left_col:
+with left:
     st.markdown("### 🎴 Game Round")
     draw_disabled = player.get("current_card") is not None or player["rounds_played"] >= fs.get("rounds", 12)
     draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
@@ -252,7 +196,7 @@ with left_col:
         permitted = allowed_types(player["rounds_played"] + 1, player)
         pool = [c for c in st.session_state.life_cards if c.get("type") in permitted]
         if not pool:
-            st.error("No available life cards.")
+            st.error("No life cards available.")
             st.stop()
         player["current_card"] = random.choice(pool)
         player["choice_made"] = False
@@ -282,41 +226,32 @@ with left_col:
                     delta_wellbeing = selected.get("wellbeing", 0)
                     delta_time = selected.get("time", 0)
 
-                    # ✅ MONEY VALIDATION
+                    # ✅ validation
                     total_available = player["wants_balance"] + player["savings"]
                     if delta_money < 0 and abs(delta_money) > total_available:
-                        st.error("💸 Not enough funds! You can’t afford this choice.")
-                        st.stop()
-
-                    if player["time"] <= 0 and delta_time > 0:
-                        st.warning("⏳ Not enough energy for this choice.")
+                        st.error("💸 Not enough funds! Adjust your spending choice.")
                         st.stop()
 
                     player["emotion"] = max(0, min(10, player["emotion"] + delta_wellbeing))
                     player["time"] = max(0, min(10, player["time"] - delta_time))
-
-                    if player["emotion"] <= 0:
-                        st.error("💥 Burnout! Your wellbeing reached 0 — game over.")
-                        st.stop()
-
                     player["savings"] += delta_money
                     player["rounds_played"] += 1
                     player["decision_log"].append(f"{card['title']} — {choice}")
                     player["choice_made"] = True
                     player["current_card"] = None
-
                     st.session_state.player = player
                     st.success("✅ Decision saved!")
                     time.sleep(0.5)
                     st.rerun()
 
-with right_col:
-    st.markdown("### 💰 Budget Overview")
-    st.markdown(f"**{player.get('name','')}** <span style='color:#888;'>({player.get('team','')})</span>", unsafe_allow_html=True)
-    st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
-    st.markdown(f"**Fixed Costs:** {format_currency(player['fixed_costs'])}")
-    st.markdown(f"**Remaining:** {format_currency(remaining)}")
+with right:
+    st.markdown("### ❤️⚡ Wellbeing / Time")
+    st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
+    st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
 
+# -------------------------------
+# DECISION LOG
+# -------------------------------
 st.markdown("---")
 st.subheader("🧾 Decision Log")
 if player["decision_log"]:
