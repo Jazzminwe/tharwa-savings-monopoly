@@ -1,6 +1,7 @@
 import streamlit as st
 import random
 import json
+import time
 
 # -------------------------------
 # Helper functions
@@ -22,6 +23,7 @@ def team_color(team):
     }
     return palette.get(team, "#6366F1")  # default indigo
 
+
 # -------------------------------
 # Setup
 # -------------------------------
@@ -37,7 +39,7 @@ st.title("🎲 Draw Life Card")
 st.markdown("---")
 
 # -------------------------------
-# Layout
+# Layout columns
 # -------------------------------
 left_col, right_col = st.columns([1.2, 1], gap="large")
 
@@ -45,59 +47,87 @@ left_col, right_col = st.columns([1.2, 1], gap="large")
 # 🎴 LEFT: Game Area
 # -------------------------------
 with left_col:
-    # Button above the progress bar
-    draw = st.button("🎴 Draw Life Card", type="primary", use_container_width=False)
-    st.progress(player["rounds_played"] / fs["rounds"])
-    st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
-    st.write(" ")
+    # Style wrapper for left box
+    st.markdown("""
+        <style>
+        .game-box {
+            background-color: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.07);
+            padding: 25px 30px;
+            margin-bottom: 1.5rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    if "life_cards" not in st.session_state:
-        with open("data/life_cards.json", "r") as f:
-            st.session_state.life_cards = json.load(f)
+    with st.container():
+        st.markdown('<div class="game-box">', unsafe_allow_html=True)
 
-    if draw:
-        player["current_card"] = random.choice(st.session_state.life_cards)
-        st.session_state.player = player
+        # --- Button and progress
+        draw = st.button("🎴 Draw Life Card", type="primary")
+        st.progress(player["rounds_played"] / fs["rounds"])
+        st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
+        st.write(" ")
 
-    # Show life card if drawn
-    if player.get("current_card"):
-        card = player["current_card"]
-        title = card.get("title", "Life Event")
-        desc = card.get("description", "No description provided.")
-        st.subheader(title)
-        st.write(desc)
+        # Load life cards if not already
+        if "life_cards" not in st.session_state:
+            with open("data/life_cards.json", "r") as f:
+                st.session_state.life_cards = json.load(f)
 
-        options = []
-        for opt in card.get("options", []):
-            label = opt.get("label", "Option")
-            money = opt.get("money", 0)
-            wellbeing = opt.get("wellbeing", 0)
-            time = opt.get("time", 0)
-            options.append(f"{label} → Money: {money}, Wellbeing: {wellbeing}, Time: {time}")
+        # Draw new card
+        if draw:
+            player["current_card"] = random.choice(st.session_state.life_cards)
+            player["choice_made"] = False
+            st.session_state.player = player
 
-        if options:
-            choice = st.radio("Choose an option:", options, key="decision_choice")
-
-            if st.button("✅ Submit Decision"):
-                selected = card["options"][options.index(choice)]
-                player["savings"] += selected.get("money", 0)
-                player["emotion"] = min(10, max(0, player["emotion"] + selected.get("wellbeing", 0)))
-                player["time"] = min(10, max(0, player["time"] - selected.get("time", 0)))
-                player["rounds_played"] += 1
-                player["decision_log"].append(choice)
-                st.session_state.player = player
-                st.success("Decision logged!")
+        # --- Display current card or blank prompt
+        if not player.get("current_card"):
+            st.markdown("### 🎴 Draw a life card to start the game!")
         else:
-            st.warning("⚠️ This card has no available options.")
+            card = player["current_card"]
+            title = card.get("title", "Life Event")
+            desc = card.get("description", "No description provided.")
+            st.subheader(title)
+            st.write(desc)
+
+            # Prepare card options
+            options = []
+            for opt in card.get("options", []):
+                label = opt.get("label", "Option")
+                money = opt.get("money", 0)
+                wellbeing = opt.get("wellbeing", 0)
+                time_cost = opt.get("time", 0)
+                options.append(f"{label} → Money: {money}, Wellbeing: {wellbeing}, Time: {time_cost}")
+
+            if options:
+                choice = st.radio("Choose an option:", options, key="decision_choice")
+
+                # Save decision button (only one click)
+                if st.button("💾 Save Decision", key="save_decision"):
+                    if not player.get("choice_made"):
+                        selected = card["options"][options.index(choice)]
+                        player["savings"] += selected.get("money", 0)
+                        player["emotion"] = min(10, max(0, player["emotion"] + selected.get("wellbeing", 0)))
+                        player["time"] = min(10, max(0, player["time"] - selected.get("time", 0)))
+                        player["rounds_played"] += 1
+                        player["decision_log"].append(choice)
+                        player["choice_made"] = True
+                        player["current_card"] = None  # clear game pane
+                        st.session_state.player = player
+                        st.success("✅ Decision saved! Stats updated.")
+                        time.sleep(0.8)
+                        st.rerun()
+            else:
+                st.warning("⚠️ This card has no available options.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------
-# 🧍 RIGHT: Unified Player Card
+# 🧍 RIGHT: Player Stats Card
 # -------------------------------
 with right_col:
     color = team_color(player["team"])
-
-    st.markdown(
-        f"""
+    st.markdown(f"""
         <style>
         .player-card {{
             background-color: #ffffff;
@@ -120,16 +150,14 @@ with right_col:
         }}
         </style>
         <div class="player-card">
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
-    # Header
+    # Player info
     st.markdown(f"### 🧍 {player['name']}")
     st.caption(f"Team: {player['team']}")
     st.write(" ")
 
-    # Savings
+    # Savings and goal
     st.markdown(f"**Savings Goal:** {player['goal_desc']}")
     st.markdown(
         f"**Current Savings:** {format_currency(player['savings'])} "
@@ -137,13 +165,13 @@ with right_col:
     )
     st.progress(player["savings"] / fs["goal"])
 
-    # Energy / Wellbeing
+    # Emojis for energy and well-being
     st.write("")
     st.markdown(f"**Energy:** {render_emoji_stat(player['time'], '⚡')}")
     st.markdown(f"**Well-being:** {render_emoji_stat(player['emotion'], '❤️')}")
     st.divider()
 
-    # Finances
+    # Financial details
     remaining = player["income"] - player["fixed_costs"]
     wants_val = player["allocation"]["wants"]
     savings_val = player["allocation"]["savings"]
@@ -163,7 +191,7 @@ with right_col:
         new_savings = st.number_input("Savings (SAR)", min_value=0, max_value=remaining, value=savings_val, step=50)
     with col3:
         st.markdown("<br>", unsafe_allow_html=True)
-        save = st.button("💾 Save", use_container_width=True)
+        save = st.button("💾 Save Budget", use_container_width=True)
 
     if save:
         if (new_wants + new_savings) != remaining:
@@ -177,7 +205,7 @@ with right_col:
     st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------
-# 🧾 Decision Log
+# 🧾 Decision log
 # -------------------------------
 st.markdown("---")
 st.subheader("🧾 Decision Log")
