@@ -4,7 +4,7 @@ import random
 import time
 
 # -------------------------------
-# Helpers
+# Helper functions
 # -------------------------------
 def format_currency(value):
     try:
@@ -20,7 +20,7 @@ def render_emoji_stat(value, emoji, max_value=10):
 
 
 # -------------------------------
-# Guard + State
+# Check for required session data
 # -------------------------------
 if "player" not in st.session_state or "facilitator_settings" not in st.session_state:
     st.warning("No player data found. Please start from the setup page.")
@@ -29,7 +29,7 @@ if "player" not in st.session_state or "facilitator_settings" not in st.session_
 player = st.session_state.player
 fs = st.session_state.facilitator_settings
 
-# Backfill old sessions safely
+# ---- Safe backfill for all player keys ----
 player.setdefault("rounds_played", 0)
 player.setdefault("savings", 0)
 player.setdefault("emotion", 5)
@@ -52,52 +52,46 @@ remaining = max(0, player["income"] - player["fixed_costs"])
 alloc.setdefault("wants", alloc.get("wants", 0))
 alloc.setdefault("ef", alloc.get("ef", 0))
 alloc.setdefault("savings", max(0, remaining - alloc["wants"] - alloc["ef"]))
-
 st.session_state.player = player
 
 st.set_page_config(layout="wide")
 
-
 # -------------------------------
-# Tiny, safe styling
+# Custom Styling
 # -------------------------------
 st.markdown("""
 <style>
-/* Keep padding modest so the title never hides under the app bar */
-div.block-container { padding-top: 1.0rem !important; }
+div.block-container { padding-top: 1rem !important; }
 
-/* Style ONLY the Streamlit container that actually holds the KPI widgets.
-   We drop a tiny sentinel (.kpi-marker) at the start of each container,
-   and style the ancestor container that :has() it. */
+/* KPI cards: clean white, equal height */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) {
-    background: #f6f7f9;
+    background: #ffffff;
     border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    padding: 10px 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+    padding: 12px 16px;
     height: 100%;
 }
 
-/* Progress bar look */
-.stProgress > div > div {
-    height: 6px !important;
-    border-radius: 4px !important;
-}
-
-/* Slightly smaller headings inside cards */
+/* Smaller heading size inside cards */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h4,
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
+    font-size: 1rem !important;
     margin-bottom: 4px !important;
-    font-size: 1.05rem !important;
+    font-weight: 600;
 }
 
-/* Make number inputs snug */
+/* Tight number inputs */
 div[data-testid="stNumberInputContainer"] > div { margin-top: 0 !important; }
+
+/* Reduce gaps between columns */
+div[data-testid="column"] { padding-left: 0.4rem !important; padding-right: 0.4rem !important; }
+
+.stProgress > div > div { height: 6px !important; border-radius: 4px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-
 # -------------------------------
-# Header (simple + robust)
+# Header
 # -------------------------------
 left_h, right_h = st.columns([4, 1])
 with left_h:
@@ -107,7 +101,6 @@ with right_h:
     tr = fs["rounds"]
     st.write(f"**Rounds:** {rp}/{tr}")
     st.progress(rp / max(1, tr))
-
 
 # -------------------------------
 # KPI Row
@@ -119,89 +112,81 @@ def update_allocations(new_wants=None, new_ef=None):
         player["allocation"]["wants"] = int(new_wants)
     if new_ef is not None:
         player["allocation"]["ef"] = int(new_ef)
-
     total_alloc = player["allocation"]["wants"] + player["allocation"]["ef"]
     if total_alloc > remaining:
         st.warning("⚠️ Allocations exceed remaining budget.")
         return
-
     player["allocation"]["savings"] = max(0, remaining - total_alloc)
     st.session_state.player = player
     st.toast("✅ Budget updated!")
 
-k1, k2, k3, k4 = st.columns(4, gap="large")
+k1, k2, k3, k4 = st.columns(4, gap="small")
 
-# Savings Goal
+# --- Savings Goal
 with k1:
-    with st.container():
-        st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
-        st.markdown("#### 💸 Savings Goal")
-        st.caption(player.get("goal_desc", ""))
-        pct = (player["savings"] / fs["goal"]) if fs["goal"] else 0
-        st.progress(min(1.0, pct))
-        st.markdown(f"**{format_currency(player['savings'])} / {format_currency(fs['goal'])}** ({int(pct*100)}%)")
+    st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
+    st.markdown("#### 💸 Savings Goal")
+    st.caption(player.get("goal_desc", ""))
+    pct = player["savings"] / fs["goal"] if fs["goal"] else 0
+    st.progress(min(1.0, pct))
+    st.markdown(f"**{format_currency(player['savings'])} / {format_currency(fs['goal'])}** ({int(pct*100)}%)")
 
-# Emergency Fund
+# --- Emergency Fund
 with k2:
-    with st.container():
-        st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
-        st.markdown("#### 🛟 Emergency Fund")
-        st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
-        new_ef = st.number_input(
-            "EF Allocation",
-            min_value=0, max_value=remaining, value=int(player['allocation']['ef']),
-            step=50, label_visibility="collapsed", key="ef_allocation"
-        )
-        if new_ef != player["allocation"]["ef"]:
-            update_allocations(new_ef=new_ef)
-        st.caption(f"Cap: {format_currency(player['ef_cap'])}")
+    st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
+    st.markdown("#### 🛟 Emergency Fund")
+    st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
+    new_ef = st.number_input(
+        "EF Allocation",
+        min_value=0, max_value=remaining, value=int(player['allocation']['ef']),
+        step=50, label_visibility="collapsed", key="ef_allocation"
+    )
+    if new_ef != player["allocation"]["ef"]:
+        update_allocations(new_ef=new_ef)
+    st.caption(f"Cap: {format_currency(player['ef_cap'])}")
 
-# Wants Fund
+# --- Wants Fund
 with k3:
-    with st.container():
-        st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
-        st.markdown("#### 🎉 Wants Fund")
-        st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
-        new_wants = st.number_input(
-            "Wants Allocation",
-            min_value=0, max_value=remaining, value=int(player['allocation']['wants']),
-            step=50, label_visibility="collapsed", key="wants_allocation"
-        )
-        if new_wants != player["allocation"]["wants"]:
-            update_allocations(new_wants=new_wants)
-        st.caption(f"Monthly add: {format_currency(player['allocation']['wants'])}")
+    st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
+    st.markdown("#### 🎉 Wants Fund")
+    st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
+    new_wants = st.number_input(
+        "Wants Allocation",
+        min_value=0, max_value=remaining, value=int(player['allocation']['wants']),
+        step=50, label_visibility="collapsed", key="wants_allocation"
+    )
+    if new_wants != player["allocation"]["wants"]:
+        update_allocations(new_wants=new_wants)
+    st.caption(f"Monthly add: {format_currency(player['allocation']['wants'])}")
 
-# Wellbeing / Time
+# --- Wellbeing / Time
 with k4:
-    with st.container():
-        st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
-        st.markdown("#### ❤️⚡ Wellbeing / Time")
-        st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
-        st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
-
+    st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
+    st.markdown("#### ❤️⚡ Wellbeing / Time")
+    st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
+    st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
 
 # -------------------------------
-# Stop & Reflect if goal reached
+# Reflection logic — when goal reached
 # -------------------------------
 if player["savings"] >= fs["goal"]:
     st.markdown("---")
     st.markdown("""
     ### 🎉 Congratulations — You’ve Reached Your Savings Goal!
     You’ve balanced income, needs, and wellbeing over the year.  
-    Before we move to investing later in the workshop, reflect briefly:
+    Before moving to investing later in the workshop, reflect briefly:
     - What helped you reach your goal?
     - What tradeoffs were hardest?
     - What would you keep doing next month?
     """)
     st.stop()
 
-
 # -------------------------------
-# Row 3 — Game (left) + Budget Overview (right)
+# Game + Simplified Budget Overview
 # -------------------------------
 left_col, right_col = st.columns([2, 1], gap="large")
 
-# ---- Left: Game Round
+# --- Game section
 with left_col:
     st.markdown("### 🎴 Game Round")
     draw_disabled = player.get("current_card") is not None or player["rounds_played"] >= fs["rounds"]
@@ -255,12 +240,10 @@ with left_col:
                     delta_wellbeing = selected.get("wellbeing", 0)
                     delta_time = selected.get("time", 0)
 
-                    # Time guard
                     if player["time"] <= 0 and delta_time > 0:
                         st.warning("⏳ Not enough energy for this choice.")
                         st.stop()
 
-                    # Apply wellbeing/time
                     player["emotion"] = max(0, min(10, player["emotion"] + delta_wellbeing))
                     player["time"] = max(0, min(10, player["time"] - delta_time))
 
@@ -268,7 +251,6 @@ with left_col:
                         st.error("💥 Burnout! Your wellbeing reached 0 — game over.")
                         st.stop()
 
-                    # Apply money
                     player["savings"] += delta_money
                     player["rounds_played"] += 1
                     player["decision_log"].append(f"{card['title']} — {choice}")
@@ -280,19 +262,16 @@ with left_col:
                     time.sleep(0.5)
                     st.rerun()
 
-# ---- Right: Budget Overview
+# --- Simplified Budget Overview
 with right_col:
     st.markdown("### 💰 Budget Overview")
     st.markdown(f"**{player.get('name','')}** <span style='color:#888;'>({player.get('team','')})</span>", unsafe_allow_html=True)
     st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
     st.markdown(f"**Fixed Costs:** {format_currency(player['fixed_costs'])}")
     st.markdown(f"**Remaining:** {format_currency(remaining)}")
-    st.markdown(f"**Wants Allocation:** {format_currency(player['allocation']['wants'])}")
-    st.markdown(f"**EF Allocation:** {format_currency(player['allocation']['ef'])}")
-    st.markdown(f"**Savings Allocation (auto):** {format_currency(player['allocation']['savings'])}")
 
 # -------------------------------
-# Decision Log (bottom)
+# Decision Log
 # -------------------------------
 st.markdown("---")
 st.subheader("🧾 Decision Log")
