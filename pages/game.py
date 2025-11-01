@@ -28,86 +28,70 @@ fs = st.session_state.facilitator_settings
 st.set_page_config(layout="wide")
 
 # -------------------------------
-# Page Styling
+# Styling
 # -------------------------------
-st.markdown(
-    """
-    <style>
-    div.block-container {
-        padding-top: 2.4rem !important;
-    }
+st.markdown("""
+<style>
+div.block-container {
+    padding-top: 2.4rem !important;
+}
+h3, h4, h5 {margin-bottom: 0.3rem !important;}
+.small-label {color:#777;font-size:0.85rem;}
 
-    h3, h4, h5 {
-        margin-bottom: 0.3rem !important;
-    }
+/* KPI row as flex container */
+.kpi-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 1rem;
+  width: 100%;
+}
 
-    .small-label {
-        color:#777;
-        font-size:0.85rem;
-    }
+/* Real box style for each KPI */
+div[data-testid="stVerticalBlock"] > div.kpi-card {
+  flex: 1;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.1);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
 
-    /* KPI container styling */
-    .kpi-anchor + div[data-testid="stContainer"] {
-      background:#f9f9f9 !important;
-      border:0 !important;
-      border-radius:16px !important;
-      box-shadow:0 6px 18px rgba(0,0,0,0.12) !important;
-      padding:14px 18px !important;
-      min-height:230px !important;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-    }
+/* Fix progress bar look */
+.stProgress > div > div {
+  height: 6px !important;
+  border-radius: 4px !important;
+}
 
-    .kpi-anchor + div[data-testid="stContainer"] h6 {
-      font-size:1rem !important;
-      margin-bottom:0.2rem !important;
-    }
-
-    .kpi-anchor + div[data-testid="stContainer"] .stProgress > div > div {
-      height:6px !important;
-      border-radius:4px !important;
-    }
-
-    /* Title and round counter layout */
-    .title-row {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      width:100%;
-    }
-
-    .title-row h3 {
-      margin:0;
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
-
-    .rounds-info {
-      font-size:0.9rem;
-      color:#444;
-      text-align:right;
-    }
-
-    .round-progress {
-      width:160px;
-      height:8px;
-      border-radius:4px;
-      display:block;
-    }
-
-    input[type=number]{
-        border:1px solid #ddd;
-        border-radius:6px;
-        padding:4px 8px;
-        font-size:0.9rem;
-        width:100%;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+/* Title and counter layout */
+.title-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+}
+.title-row h3 {
+  margin:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.rounds-info {
+  font-size:0.9rem;
+  color:#444;
+  text-align:right;
+}
+.round-progress {
+  width:160px;
+  height:8px;
+  border-radius:4px;
+  display:block;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # -------------------------------
 # Load life cards
@@ -117,7 +101,7 @@ if "life_cards" not in st.session_state:
         st.session_state.life_cards = json.load(f)
 
 # -------------------------------
-# HEADER (Row 1)
+# HEADER
 # -------------------------------
 rounds_played = player["rounds_played"]
 total_rounds = fs["rounds"]
@@ -137,7 +121,7 @@ st.markdown(
 )
 
 # -------------------------------
-# Auto Contributions per round
+# Auto Contributions
 # -------------------------------
 if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
     ef_add = player["allocation"]["ef"]
@@ -154,7 +138,7 @@ if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
     st.session_state.player = player
 
 # -------------------------------
-# Row 2 – KPI Dashboard
+# KPI DASHBOARD (equal height boxes)
 # -------------------------------
 remaining = player["income"] - player["fixed_costs"]
 
@@ -171,54 +155,77 @@ def update_allocations(new_wants=None, new_ef=None):
     st.session_state.player = player
     st.toast("✅ Budget updated!")
 
-kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
+st.markdown('<div class="kpi-row">', unsafe_allow_html=True)
 
-# --- Savings Goal
-with kpi_col1:
-    st.markdown('<div class="kpi-anchor"></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        pct = player["savings"] / fs["goal"] if fs["goal"] > 0 else 0
-        st.markdown("###### 💸 Savings Goal")
-        st.caption(player["goal_desc"])
-        st.progress(pct)
+# --- KPI 1: Savings Goal
+with st.container():
+    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+    pct = player["savings"] / fs["goal"] if fs["goal"] > 0 else 0
+    pct_capped = min(pct, 1.0)
+    st.markdown("###### 💸 Savings Goal")
+    st.caption(player["goal_desc"])
+    st.progress(pct_capped)
+    if pct >= 1:
+        st.markdown(f"**{format_currency(player['savings'])} / {format_currency(fs['goal'])}** 🎉 Goal reached!")
+    else:
         st.markdown(f"**{format_currency(player['savings'])} / {format_currency(fs['goal'])}** ({int(pct*100)}%)")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Emergency Fund
-with kpi_col2:
-    st.markdown('<div class="kpi-anchor"></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        st.markdown("###### 🛟 Emergency Fund")
-        st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
-        new_ef = st.number_input(
-            "EF Allocation", min_value=0, max_value=remaining, value=int(player["allocation"]["ef"]),
-            step=50, key="ef_input", label_visibility="collapsed",
-            on_change=update_allocations, args=(None, int(player["allocation"]["ef"]))
-        )
-        st.caption(f"Cap: {format_currency(player['ef_cap'])}")
+# --- KPI 2: Emergency Fund
+with st.container():
+    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+    st.markdown("###### 🛟 Emergency Fund")
+    st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
+    st.number_input(
+        "EF Allocation", min_value=0, max_value=remaining, value=int(player["allocation"]["ef"]),
+        step=50, key="ef_input", label_visibility="collapsed",
+        on_change=update_allocations, args=(None, int(player["allocation"]["ef"]))
+    )
+    st.caption(f"Cap: {format_currency(player['ef_cap'])}")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Wants Fund
-with kpi_col3:
-    st.markdown('<div class="kpi-anchor"></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        st.markdown("###### 🎉 Wants Fund")
-        st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
-        new_wants = st.number_input(
-            "Wants Allocation", min_value=0, max_value=remaining, value=int(player["allocation"]["wants"]),
-            step=50, key="wants_input", label_visibility="collapsed",
-            on_change=update_allocations, args=(int(player["allocation"]["wants"]), None)
-        )
-        st.caption(f"Monthly add: {format_currency(player['allocation']['wants'])}")
+# --- KPI 3: Wants Fund
+with st.container():
+    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+    st.markdown("###### 🎉 Wants Fund")
+    st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
+    st.number_input(
+        "Wants Allocation", min_value=0, max_value=remaining, value=int(player["allocation"]["wants"]),
+        step=50, key="wants_input", label_visibility="collapsed",
+        on_change=update_allocations, args=(int(player["allocation"]["wants"]), None)
+    )
+    st.caption(f"Monthly add: {format_currency(player['allocation']['wants'])}")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Wellbeing / Time
-with kpi_col4:
-    st.markdown('<div class="kpi-anchor"></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        st.markdown("###### ❤️⚡ Wellbeing / Time")
-        st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
-        st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
+# --- KPI 4: Wellbeing / Time
+with st.container():
+    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+    st.markdown("###### ❤️⚡ Wellbeing / Time")
+    st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
+    st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------
-# Row 3 – Game Area
+# Reflection if goal reached
+# -------------------------------
+if player["savings"] >= fs["goal"]:
+    st.markdown("---")
+    st.markdown(
+        """
+        ### 🎉 Congratulations — You’ve Reached Your Savings Goal!
+        You’ve successfully balanced income, needs, and wellbeing for 12 months.  
+        Before moving on to investing, take a moment to reflect:
+        - What helped you reach your goal?
+        - What tradeoffs were hardest?
+        - How would you sustain this habit in real life?
+        """,
+    )
+    st.stop()
+
+# -------------------------------
+# GAME AREA
 # -------------------------------
 left_col, right_col = st.columns([2, 1], gap="large")
 
@@ -296,7 +303,7 @@ with right_col:
     st.markdown(f"**{player['name']}** <span style='color:#888;'>({player['team']})</span>", unsafe_allow_html=True)
     st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
     st.markdown(f"**Fixed Costs:** {format_currency(player['fixed_costs'])}")
-    st.markdown(f"**Remaining:** {format_currency(remaining)}")
+    st.markdown(f"**Remaining:** {format_currency(player['income'] - player['fixed_costs'])}")
     st.markdown(f"**Savings Allocation (auto):** {format_currency(player['allocation']['savings'])}")
 
 # -------------------------------
