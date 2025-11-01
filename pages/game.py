@@ -18,6 +18,7 @@ def render_emoji_stat(value, emoji, max_value=10):
     empty = "▫️" * (max_value - v)
     return f"{full}{empty} ({v}/{max_value})"
 
+
 # -------------------------------
 # Ensure session data exists
 # -------------------------------
@@ -28,7 +29,6 @@ if "player" not in st.session_state or "facilitator_settings" not in st.session_
 player = st.session_state.player
 fs = st.session_state.facilitator_settings
 
-# Initialize defaults
 player.setdefault("rounds_played", 0)
 player.setdefault("savings", 0)
 player.setdefault("emotion", 5)
@@ -38,82 +38,92 @@ player.setdefault("current_card", None)
 player.setdefault("choice_made", False)
 player.setdefault("income", fs.get("income", 2000))
 player.setdefault("fixed_costs", fs.get("fixed_costs", 1000))
-player.setdefault("ef_cap", player.get("ef_cap", 3000))
-player.setdefault("ef_balance", player.get("ef_balance", 0))
-player.setdefault("wants_balance", player.get("wants_balance", 0))
-player.setdefault("name", player.get("name", ""))
-player.setdefault("team", player.get("team", ""))
+player.setdefault("ef_cap", 3000)
+player.setdefault("ef_balance", 0)
+player.setdefault("wants_balance", 0)
+player.setdefault("name", "")
+player.setdefault("team", "")
 
 st.set_page_config(layout="wide")
 
 # -------------------------------
-# Styling
+# Custom CSS
 # -------------------------------
 st.markdown("""
 <style>
+/* --- GENERAL LAYOUT --- */
 html, body, section.main, div.block-container {
-    background: transparent !important;
+    background: #fafafa !important;
     padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
+    margin: 0 auto !important;
+    max-width: 90%;
 }
 section.main div[data-testid="stVerticalBlockBorderWrapper"] {
     background: transparent !important;
     box-shadow: none !important;
+    border: none !important;
 }
 
-/* header */
+/* --- HEADER --- */
 .header-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
-    padding: 0.3rem 0.6rem 0.8rem 0.6rem;
+    align-items: center;
+    padding: 1rem 0 1.2rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 2px solid #f0f0f0;
 }
 .header-title {
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 800;
     margin: 0;
+    line-height: 1.1;
 }
 .rounds {
     text-align: right;
     font-size: 0.95rem;
+    margin: 0;
 }
 .rounds progress {
     width: 160px;
     height: 6px;
     border-radius: 3px;
     accent-color: #007bff;
-    margin-top: 4px;
+    margin-top: 6px;
 }
 
-/* KPI boxes */
+/* --- KPI BOXES --- */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) {
     background: #ffffff !important;
     border-radius: 18px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    padding: 18px 20px !important;
+    padding: 20px 24px !important;
     height: 100%;
+    transition: transform 0.15s ease;
+}
+div[data-testid="stVerticalBlock"]:has(.kpi-marker):hover {
+    transform: translateY(-2px);
 }
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h4,
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
-    font-size: 1rem !important;
+    font-size: 1.05rem !important;
     font-weight: 600;
-    margin-bottom: 6px !important;
+    margin-bottom: 8px !important;
+}
+div[data-testid="column"] {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
 }
 .stProgress > div > div {
     height: 6px !important;
     border-radius: 3px !important;
 }
-div[data-testid="column"] {
-    padding-left: 0.4rem !important;
-    padding-right: 0.4rem !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
+
 # -------------------------------
-# Header
+# HEADER
 # -------------------------------
 rp = player["rounds_played"]
 tr = fs.get("rounds", 12)
@@ -128,6 +138,7 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
 
 # -------------------------------
 # KPI ROW
@@ -149,7 +160,6 @@ with col1:
 with col2:
     st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
     st.markdown("#### 🎯 Savings Goal")
-    st.caption(player.get("goal_desc", ""))
     goal_value = fs.get("goal", 5000)
     savings_value = player.get("savings", 0)
     pct = max(0.0, min(1.0, float(savings_value) / float(goal_value))) if goal_value else 0.0
@@ -170,8 +180,9 @@ with col4:
     st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
     st.caption(f"Monthly add: {format_currency(333)}")
 
+
 # -------------------------------
-# GAME LOGIC
+# GAME SECTION
 # -------------------------------
 left, right = st.columns([2, 1], gap="large")
 
@@ -226,7 +237,6 @@ with left:
                     delta_wellbeing = selected.get("wellbeing", 0)
                     delta_time = selected.get("time", 0)
 
-                    # ✅ validation
                     total_available = player["wants_balance"] + player["savings"]
                     if delta_money < 0 and abs(delta_money) > total_available:
                         st.error("💸 Not enough funds! Adjust your spending choice.")
