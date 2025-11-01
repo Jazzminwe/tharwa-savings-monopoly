@@ -5,20 +5,22 @@ import random
 import time
 
 # -------------------------------------------------
-# Helper Functions
+# Helper functions
 # -------------------------------------------------
 def fmt(value):
+    """Format SAR values nicely."""
     try:
         return f"SAR {int(value):,}"
     except Exception:
         return f"SAR {value}"
 
 def emoji_bar(value, emoji, max_value=10):
+    """Render simple bar for wellbeing/time."""
     v = int(max(0, min(max_value, value)))
     return emoji * v + "▫️" * (max_value - v) + f" ({v}/{max_value})"
 
 # -------------------------------------------------
-# Guards
+# Guard
 # -------------------------------------------------
 if "player" not in st.session_state or "facilitator_settings" not in st.session_state:
     st.warning("No player data found. Please start from the setup page.")
@@ -43,70 +45,18 @@ p.setdefault("fixed_costs", fs.get("fixed_costs", 1000))
 p.setdefault("ef_cap", 3000)
 p.setdefault("ef_balance", 0)
 p.setdefault("wants_balance", 0)
-p.setdefault("allocation", {"savings": 334, "ef": 333, "wants": 333})
+p.setdefault("allocation", {"savings": 0, "ef": 0, "wants": 0})
 
 # -------------------------------------------------
-# CSS
+# Style
 # -------------------------------------------------
 st.markdown("""
 <style>
-div.block-container {
-  max-width: 1280px;
-  padding-top: 3rem !important;
-  padding-bottom: 1rem !important;
-  margin: 0 auto;
-  overflow: visible !important;
-  background: transparent !important;
-}
-
-.header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 0.8rem;
-}
-.header-title {
-  font-size: 1.7rem !important;
-  font-weight: 800;
-  line-height: 1.1;
-}
-.rounds {
-  text-align: right;
-  font-size: 0.9rem;
-}
-.rounds progress {
-  width: 140px;
-  height: 5px;
-  border-radius: 3px;
-  accent-color: #1f6feb;
-  margin-top: 4px;
-}
-
-/* KPI box visuals */
-.kpi-card {
-  background: #fff !important;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  padding: 18px 22px !important;
-  height: 100%;
-}
-
-/* Text */
-h3, h4, h5, h6 {
-  font-size: 1rem !important;
-  font-weight: 700 !important;
-  margin-bottom: 0.4rem !important;
-}
-
-.stProgress > div > div {
-  height: 6px !important;
-  border-radius: 3px !important;
-}
-div[data-testid="column"] {
-  padding-left: 0.6rem !important;
-  padding-right: 0.6rem !important;
-}
-hr, .stDivider { display: none !important; }
+div.block-container { max-width:1280px; padding-top:2rem; }
+.header-row { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1rem; }
+.header-title { font-size:1.8rem; font-weight:800; }
+.rounds { text-align:right; font-size:0.9rem; }
+.rounds progress { width:140px; height:6px; border-radius:3px; accent-color:#1f6feb; margin-top:4px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -115,7 +65,7 @@ hr, .stDivider { display: none !important; }
 # -------------------------------------------------
 rp = p["rounds_played"]
 tr = fs.get("rounds", 10)
-pct_rounds = min(1.0, max(0.0, float(rp) / max(1, float(tr))))
+pct_rounds = min(1.0, float(rp) / max(1, float(tr)))
 
 st.markdown(f"""
 <div class="header-row">
@@ -125,123 +75,117 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# KPI ROW (FIXED BOXES)
+# Budget overview and allocations
 # -------------------------------------------------
 remaining = int(p["income"] - p["fixed_costs"])
 k1, k2, k3, k4 = st.columns(4, gap="small")
 
-BOX_STYLE = """
-background-color: #ffffff;
-border-radius: 16px;
-box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-padding: 18px 22px;
-margin-bottom: 12px;
-height: 100%;
-"""
-
 with k1:
-    st.markdown(f'<div style="{BOX_STYLE}">', unsafe_allow_html=True)
-    st.markdown("#### 💰 Budget Overview")
+    st.markdown("### 💰 Budget Overview")
     st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
     st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
     st.markdown(f"**Remaining:** {fmt(remaining)}")
-    st.markdown('</div>', unsafe_allow_html=True)
 
 with k2:
-    st.markdown(f'<div style="{BOX_STYLE}">', unsafe_allow_html=True)
-    st.markdown("#### 🎯 Savings Goal")
+    st.markdown("### 🎯 Savings Goal")
     goal = fs.get("goal", 5000)
     pct = p["savings"] / goal if goal else 0
     st.progress(min(1.0, pct))
     st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
     p["allocation"]["savings"] = st.number_input(
-        "Monthly allocation:",
-        min_value=0,
-        max_value=remaining,
-        value=int(p["allocation"]["savings"]),
-        step=50,
-        key="alloc_sav_input"
+        "Monthly allocation (Savings):", 0, remaining, int(p["allocation"]["savings"]), 50, key="alloc_sav"
     )
-    st.markdown('</div>', unsafe_allow_html=True)
 
 with k3:
-    st.markdown(f'<div style="{BOX_STYLE}">', unsafe_allow_html=True)
-    st.markdown("#### 🛟 Emergency Fund")
+    st.markdown("### 🛟 Emergency Fund")
     st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
     st.caption(f"Cap: {fmt(p['ef_cap'])}")
     p["allocation"]["ef"] = st.number_input(
-        "Monthly allocation:",
-        min_value=0,
-        max_value=remaining,
-        value=int(p["allocation"]["ef"]),
-        step=50,
-        key="alloc_ef_input"
+        "Monthly allocation (EF):", 0, remaining, int(p["allocation"]["ef"]), 50, key="alloc_ef"
     )
-    st.markdown('</div>', unsafe_allow_html=True)
 
 with k4:
-    st.markdown(f'<div style="{BOX_STYLE}">', unsafe_allow_html=True)
-    st.markdown("#### 🎉 Wants Fund")
+    st.markdown("### 🎉 Wants Fund")
     st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
     st.caption("Cap: None")
     p["allocation"]["wants"] = st.number_input(
-        "Monthly allocation:",
-        min_value=0,
-        max_value=remaining,
-        value=int(p["allocation"]["wants"]),
-        step=50,
-        key="alloc_wants_input"
+        "Monthly allocation (Wants):", 0, remaining, int(p["allocation"]["wants"]), 50, key="alloc_w"
     )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.session_state.player = p
 
 # -------------------------------------------------
-# Logic Helpers
+# Helpers for game logic
 # -------------------------------------------------
-def apply_monthly(p):
+def apply_monthly_income(p):
+    """Add player’s monthly allocations to each fund at start of round."""
     p["ef_balance"] = min(p["ef_cap"], p["ef_balance"] + p["allocation"]["ef"])
     p["wants_balance"] += p["allocation"]["wants"]
     p["savings"] += p["allocation"]["savings"]
 
-def end_game(msg):
-    st.error(msg)
-    if st.button("🔄 Restart Game"):
-        for k in list(st.session_state.keys()):
-            del st.session_state[k]
-        st.rerun()
-    st.stop()
+def apply_card_effects(p, selected):
+    """Apply life card impact on funds, time, and wellbeing."""
+    money = selected.get("money", 0)
+    wellbeing = selected.get("wellbeing", 0)
+    time_cost = selected.get("time", 0)
+
+    # Money: subtract from Wants -> Savings -> EF if negative
+    if money < 0:
+        need = abs(money)
+        for fund in ["wants_balance", "savings", "ef_balance"]:
+            take = min(need, p[fund])
+            p[fund] -= take
+            need -= take
+            if need <= 0:
+                break
+        if need > 0:
+            st.warning("💸 Some expenses couldn’t be covered!")
+
+    else:
+        # Positive money adds to savings
+        p["savings"] += money
+
+    # Wellbeing / time
+    p["emotion"] = max(0, min(10, p["emotion"] + wellbeing))
+    if p["time"] - time_cost < 0:
+        st.error("⏳ Not enough time to take this action.")
+        st.stop()
+    p["time"] -= time_cost
 
 # -------------------------------------------------
-# Game + Wellbeing Row
+# Game section
 # -------------------------------------------------
-left, right = st.columns([2, 1], gap="large")
+left, right = st.columns([2, 1])
 
 with left:
     st.markdown("### 🎴 Game Round")
 
+    # Game-over checks
     if p["emotion"] <= 0:
-        end_game("💥 You’ve burned out! Take care of your wellbeing — balance is key.")
+        st.error("💥 Burnout! Game over.")
+        st.stop()
     if p["savings"] >= fs.get("goal", 5000):
-        end_game("🎉 Congratulations! You reached your savings goal! Great planning and patience.")
+        st.success("🎉 You reached your savings goal! Well done.")
+        st.stop()
     if p["time"] <= 0:
+        st.warning("⏳ You ran out of time energy. -2 wellbeing, time reset to 3.")
         p["emotion"] = max(0, p["emotion"] - 2)
         p["time"] = 3
-        st.warning("⏳ You ran out of time! You feel drained (-2 wellbeing, time reset to 3).")
 
     draw_disabled = bool(p.get("current_card") or p["rounds_played"] >= tr)
     draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
 
+    # Load cards
     if "life_cards" not in st.session_state:
         with open("data/life_cards.json", "r") as f:
             st.session_state.life_cards = json.load(f)
 
-    if draw:
-        apply_monthly(p)
+    # Start new round
+    if draw and not draw_disabled:
+        apply_monthly_income(p)
         p["current_card"] = random.choice(st.session_state.life_cards)
         p["choice_made"] = False
         st.session_state.player = p
 
+    # Show card
     if not p.get("current_card"):
         st.caption("Draw a life card to start the month.")
     else:
@@ -250,71 +194,40 @@ with left:
         if card.get("description"):
             st.write(card["description"])
 
-        options = [
+        options = card.get("options", [])
+        display_opts = [
             f"{opt['label']} → Money: {opt.get('money',0)}, Wellbeing: {opt.get('wellbeing',0)}, Time: {opt.get('time',0)}"
-            for opt in card.get("options", [])
+            for opt in options
         ]
-        choice = st.radio("Choose an option:", options, key="decision_choice")
-
-        sum_alloc = sum(p["allocation"].values())
-        if sum_alloc != remaining:
-            st.warning(f"Your monthly allocations ({fmt(sum_alloc)}) must equal remaining ({fmt(remaining)}).")
+        choice = st.radio("Choose an option:", display_opts, key="decision_choice")
 
         if st.button("💾 Save Decision", key="save_decision"):
-            if sum_alloc != remaining:
-                st.error("Allocations do not match remaining budget.")
-                st.stop()
+            selected = options[display_opts.index(choice)]
+            apply_card_effects(p, selected)
 
-            selected = card["options"][options.index(choice)]
-            money = selected.get("money", 0)
-            wellbeing = selected.get("wellbeing", 0)
-            time_cost = selected.get("time", 0)
-
-            if money < 0:
-                need = abs(money)
-                from_wants = min(need, p["wants_balance"])
-                p["wants_balance"] -= from_wants
-                need -= from_wants
-                if need > p["savings"]:
-                    st.error("💸 Not enough funds.")
-                    st.stop()
-                p["savings"] -= need
-            else:
-                p["savings"] += money
-
-            p["emotion"] = max(0, min(10, p["emotion"] + wellbeing))
-            if p["time"] - time_cost < 0:
-                st.error("⏳ Not enough time.")
-                st.stop()
-            p["time"] -= time_cost
-
+            # Advance round
             p["rounds_played"] += 1
             p["decision_log"].append(f"{card['title']} — {choice}")
             p["choice_made"] = True
             p["current_card"] = None
             st.session_state.player = p
 
-            st.success("✅ Decision saved!")
+            st.success("✅ Decision saved! Next round starting...")
             time.sleep(0.4)
             st.rerun()
 
 with right:
-    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-    st.markdown("#### 📈 Game Progress")
+    st.markdown("### 📈 Game Progress")
     st.markdown(f"**Rounds:** {rp}/{tr}")
     st.progress(pct_rounds)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-    st.markdown("#### ❤️⚡ Wellbeing / Time Overview")
+    st.markdown("### ❤️⚡ Wellbeing / Time")
     st.markdown(f"**Wellbeing:** {emoji_bar(p['emotion'], '❤️')}")
     st.markdown(f"**Time:** {emoji_bar(p['time'], '⚡')}")
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------------------------
-# Decision Log
+# Decision log
 # -------------------------------------------------
-st.markdown("""<hr style="border:none;border-top:1px solid #eee;margin:.8rem 0 .4rem">""", unsafe_allow_html=True)
+st.markdown("---")
 st.subheader("🧾 Decision Log")
 if p["decision_log"]:
     for i, d in enumerate(p["decision_log"], 1):
