@@ -54,13 +54,13 @@ if player.get("ef_full_alert", False):
             player["allocation"]["ef"] = 0
             player["ef_full_alert"] = False
             st.session_state.player = player
-            st.experimental_rerun()
+            st.rerun()
 
     with col2:
         if st.button("✖️ Keep EF as is"):
             player["ef_full_alert"] = False
             st.session_state.player = player
-            st.experimental_rerun()
+            st.rerun()
 
     st.stop()  # Block rest of UI until user responds
 
@@ -75,7 +75,7 @@ if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
     if ef_add > 0 and projected >= player["ef_cap"] and not player.get("ef_full_alert", False):
         player["ef_full_alert"] = True
         st.session_state.player = player
-        st.experimental_rerun()
+        st.rerun()
 
     room = max(0, player["ef_cap"] - player["ef_balance"])
     to_add = min(room, ef_add)
@@ -175,7 +175,7 @@ with left_col:
                     st.session_state.player = player
                     st.success("✅ Decision saved! Stats updated.")
                     time.sleep(0.6)
-                    st.experimental_rerun()
+                    st.rerun()
         else:
             st.warning("⚠️ This card has no available options.")
 
