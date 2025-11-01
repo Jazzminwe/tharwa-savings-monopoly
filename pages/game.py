@@ -26,26 +26,75 @@ player = st.session_state.player
 fs = st.session_state.facilitator_settings
 
 st.set_page_config(layout="wide")
+
+# -------------------------------
+# Page Styling
+# -------------------------------
 st.markdown(
     """
     <style>
-    div.block-container {padding-top: 1.2rem;}
-    h3, h4, h5 {margin-bottom: 0.3rem;}
-    .small-label {color:#888;font-size:0.85rem;}
+    div.block-container {
+        padding-top: 2.4rem !important;
+    }
+    h3, h4, h5 {
+        margin-bottom: 0.3rem !important;
+    }
+    .small-label {
+        color:#777;
+        font-size:0.85rem;
+    }
+
     /* KPI container styling */
     .kpi-anchor + div[data-testid="stContainer"]{
-      background:#f8f8f8 !important;
+      background:#f9f9f9 !important;
       border:0 !important;
-      border-radius:12px !important;
-      box-shadow:0 3px 8px rgba(0,0,0,0.08) !important;
-      padding:14px 16px !important;
+      border-radius:14px !important;
+      box-shadow:0 4px 12px rgba(0,0,0,0.12) !important;
+      padding:16px 18px !important;
+      min-height:220px !important;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
     }
+
+    /* Progress bar */
     .kpi-anchor + div[data-testid="stContainer"] .stProgress > div > div{
       height:6px !important;
       border-radius:4px !important;
     }
-    input[type=number]{border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:0.9rem;width:100%;}
-    progress{height:6px;border-radius:4px;}
+
+    /* Title and round counter layout */
+    .title-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      width:100%;
+    }
+    .title-row h3 {
+      margin:0;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .rounds-info {
+      font-size:0.9rem;
+      color:#444;
+      text-align:right;
+    }
+    .round-progress {
+      width:160px;
+      height:8px;
+      border-radius:4px;
+      display:block;
+    }
+
+    input[type=number]{
+        border:1px solid #ddd;
+        border-radius:6px;
+        padding:4px 8px;
+        font-size:0.9rem;
+        width:100%;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -61,22 +110,22 @@ if "life_cards" not in st.session_state:
 # -------------------------------
 # HEADER (Row 1)
 # -------------------------------
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown("<h3 style='margin-bottom:0.2rem;'>💰 <b>Savings Monopoly</b></h3>", unsafe_allow_html=True)
-with col2:
-    rounds_played = player["rounds_played"]
-    total_rounds = fs["rounds"]
-    progress = rounds_played / max(1, total_rounds)
-    st.markdown(
-        f"""
-        <div style="text-align:right; margin-top:0.3rem;">
-            <span class="small-label">Rounds: {rounds_played}/{total_rounds}</span>
-            <progress value="{progress}" max="1" style="width:100%;"></progress>
+rounds_played = player["rounds_played"]
+total_rounds = fs["rounds"]
+progress = rounds_played / max(1, total_rounds)
+
+st.markdown(
+    f"""
+    <div class="title-row">
+        <h3>💰 <b>Savings Monopoly</b></h3>
+        <div class="rounds-info">
+            <div>Rounds: {rounds_played}/{total_rounds}</div>
+            <progress class="round-progress" value="{progress}" max="1"></progress>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # -------------------------------
 # Auto Contributions per round
