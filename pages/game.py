@@ -47,7 +47,7 @@ player.setdefault("ef_balance", 0)
 player.setdefault("wants_cap", None)
 player.setdefault("wants_balance", 0)
 
-# Monthly allocations (editable in KPI cards)
+# Monthly allocations (editable)
 player.setdefault("allocation", {
     "savings": max(0, player["income"] - player["fixed_costs"]) // 2,
     "ef": 0,
@@ -61,57 +61,69 @@ st.set_page_config(layout="wide")
 st.session_state.player = player  # persist
 
 # -------------------------------
-# CSS
+# CSS (UI fixes)
 # -------------------------------
 st.markdown("""
 <style>
-/* Safer top spacing so title isn't under the Streamlit toolbar */
+/* --- Layout --- */
 div.block-container {
   max-width: 1280px;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 22px) !important;
-  padding-bottom: 0.6rem;
+  padding-top: 4rem !important;  /* prevents title cutoff */
+  padding-bottom: 1rem !important;
   margin: 0 auto;
   background: transparent !important;
   overflow: visible !important;
 }
 
-/* Header */
+/* --- Header --- */
 .header-row {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: flex-end;
-  padding: 0 0 0.6rem 0;
+  margin-bottom: 1rem;
 }
 .header-title {
-  font-size: 2.2rem;
+  font-size: 2.5rem;
   font-weight: 800;
-  line-height: 1.1;
   margin: 0;
+  line-height: 1.1;
   white-space: nowrap;
   overflow: visible;
 }
-
-/* Columns: tighten internal gutters so cards can span neatly */
-div[data-testid="column"] {
-  padding-left: 0.5rem !important;
-  padding-right: 0.5rem !important;
+.rounds {
+  text-align: right;
+  font-size: 1rem;
+}
+.rounds progress {
+  width: 160px;
+  height: 6px;
+  border-radius: 3px;
+  accent-color: #1f6feb;
+  margin-top: 6px;
 }
 
-/* KPI cards (shadowed) */
-.kpi-card, .side-card {
+/* --- KPI Cards --- */
+.kpi-card {
   background: #fff !important;
   border-radius: 18px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  padding: 20px 24px !important;
-  width: 100%;
+  padding: 22px 24px !important;
+  height: auto !important;
+  width: 100% !important;
 }
-.kpi-card h4, .kpi-card h5, .side-card h4, .side-card h5 {
-  margin: 0 0 8px 0 !important;
+.kpi-card h4, .kpi-card h5 {
+  margin: 0 0 10px 0 !important;
   font-size: 1.05rem !important;
   font-weight: 700;
 }
 
-/* Make Streamlit number inputs stretch full width and look slimmer */
+/* --- Columns --- */
+div[data-testid="column"] {
+  padding-left: 0.7rem !important;
+  padding-right: 0.7rem !important;
+}
+
+/* --- Inputs --- */
 div[data-testid="stNumberInput"] > div {
   width: 100% !important;
 }
@@ -119,30 +131,31 @@ div[data-testid="stNumberInput"] input {
   width: 100% !important;
 }
 
-/* Slim progress bars */
+/* --- Progress Bars --- */
 .stProgress > div > div {
   height: 6px !important;
   border-radius: 3px !important;
 }
 
-/* Remove default rules; we'll add one before the Decision Log */
-hr, .stDivider { display: none; }
-
-/* Reduce random vertical gaps that created the "floating pill" look */
-section.main > div:first-child { margin-top: 0 !important; }
-.block-container > div { margin-top: 0.2rem; }
-
-/* Compact radio + buttons in card body */
-.stRadio > label { margin-bottom: 0.25rem !important; }
+/* --- Divider cleanup --- */
+hr, .stDivider { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------
 # Header
 # -------------------------------
+rp = player["rounds_played"]
+tr = fs.get("rounds", 12)
+pct_rounds = min(1.0, max(0.0, float(rp) / max(1, float(tr))))
+
 st.markdown(f"""
 <div class="header-row">
   <div class="header-title">💰 Savings Monopoly</div>
+  <div class="rounds">
+    <b>Rounds:</b> {rp}/{tr}<br>
+    <progress value="{pct_rounds}" max="1"></progress>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -166,7 +179,6 @@ with k2:
     goal_value = fs.get("goal", 5000)
     savings_value = player.get("savings", 0)
     pct = (savings_value / goal_value) if goal_value else 0.0
-    pct = max(0.0, min(1.0, pct))
     st.progress(pct)
     st.markdown(f"**{format_currency(savings_value)} / {format_currency(goal_value)}** ({int(pct*100)}%)")
 
@@ -210,16 +222,16 @@ with k4:
     player["allocation"]["wants"] = alloc_wants
     st.markdown("</div>", unsafe_allow_html=True)
 
-st.session_state.player = player  # persist any allocation edits
+st.session_state.player = player
 
 # -------------------------------
-# Row 2: Game (left) + Progress + Wellbeing/Time (right)
+# Row 2: Game + Wellbeing/Time
 # -------------------------------
 left, right = st.columns([2, 1], gap="large")
 
 with left:
     st.markdown("### 🎴 Game Round")
-    draw_disabled = player.get("current_card") is not None or player["rounds_played"] >= fs.get("rounds", 12)
+    draw_disabled = player.get("current_card") is not None or player["rounds_played"] >= tr
     draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
 
     if "life_cards" not in st.session_state:
@@ -276,12 +288,12 @@ with left:
             if sum_alloc != remaining:
                 st.warning(
                     f"Your monthly allocations ({format_currency(sum_alloc)}) must equal the remaining budget "
-                    f"({format_currency(remaining)}). Adjust the fields in the KPI cards above."
+                    f"({format_currency(remaining)}). Adjust the fields above."
                 )
 
             if st.button("💾 Save Decision", key="save_decision"):
                 if sum_alloc != remaining:
-                    st.error("Allocations do not match the remaining budget. Please adjust them in the KPI cards.")
+                    st.error("Allocations do not match remaining budget.")
                     st.stop()
 
                 if not player.get("choice_made"):
@@ -297,7 +309,7 @@ with left:
                         need -= from_wants
                         if need > 0:
                             if need > player["savings"]:
-                                st.error("💸 Not enough funds. You don't have enough in Wants + Savings to cover this.")
+                                st.error("💸 Not enough funds to cover this.")
                                 st.stop()
                             player["savings"] -= need
                     else:
@@ -315,30 +327,25 @@ with left:
                     player["current_card"] = None
                     st.session_state.player = player
 
-                    st.success("✅ Decision saved! Stats updated.")
+                    st.success("✅ Decision saved!")
                     time.sleep(0.4)
                     st.rerun()
 
 with right:
-    # Compact Game Progress box (moved out of header to avoid clipping)
-    rp = player["rounds_played"]
-    tr = fs.get("rounds", 12)
-    pct_rounds = min(1.0, max(0.0, float(rp) / max(1, float(tr))))
-    with st.container():
-        st.markdown('<div class="side-card">', unsafe_allow_html=True)
-        st.markdown("#### 📈 Game Progress")
-        st.markdown(f"**Rounds:** {rp}/{tr}")
-        st.progress(pct_rounds)
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+    st.markdown("#### 📈 Game Progress")
+    st.markdown(f"**Rounds:** {rp}/{tr}")
+    st.progress(pct_rounds)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="side-card">', unsafe_allow_html=True)
+    st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
     st.markdown("#### ❤️⚡ Wellbeing / Time Overview")
     st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
     st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------
-# Decision Log (single divider above)
+# Decision Log
 # -------------------------------
 st.markdown("""<hr style="display:block;border:none;border-top:1px solid #eee;margin:1rem 0 0.5rem 0;">""",
             unsafe_allow_html=True)
