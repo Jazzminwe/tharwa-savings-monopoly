@@ -14,7 +14,6 @@ def render_emoji_stat(value, emoji, max_value=10):
     empty = "▫️" * int(max_value - value)
     return f"{full}{empty} ({int(value)}/{max_value})"
 
-
 # -------------------------------
 # Setup
 # -------------------------------
@@ -26,7 +25,7 @@ player = st.session_state.player
 fs = st.session_state.facilitator_settings
 
 st.set_page_config(layout="wide")
-st.title("💰 Savings Monopoly")
+st.markdown("<style>div.block-container{padding-top:1rem;}</style>", unsafe_allow_html=True)
 
 # -------------------------------
 # Load life cards
@@ -35,44 +34,39 @@ if "life_cards" not in st.session_state:
     with open("data/life_cards.json", "r") as f:
         st.session_state.life_cards = json.load(f)
 
-# Initialize wants fund if missing
-if "wants_balance" not in player:
-    player["wants_balance"] = 0
+# -------------------------------
+# Layout: Row 1 – Header
+# -------------------------------
+col1, col2 = st.columns([3, 1])
 
-# -------------------------------
-# Emergency Fund full popup
-# -------------------------------
-if player.get("ef_full_alert", False):
-    st.markdown("## 🚨 Emergency Fund Full")
-    st.info(
-        f"Your Emergency Fund cap is {format_currency(player['ef_cap'])}. "
-        f"Current: {format_currency(player['ef_balance'])}.\n\n"
-        "Future EF contributions won't fit. Redirect EF to Savings Goal?"
+with col1:
+    st.markdown("## 💰 **Savings Monopoly**")
+    st.caption(f"👤 {player['name']} — *{player['team']}*")
+
+with col2:
+    rounds_played = player["rounds_played"]
+    total_rounds = fs["rounds"]
+    progress = rounds_played / max(1, total_rounds)
+    st.markdown(
+        f"""
+        <div style="text-align:right;">
+            <b>Rounds:</b> {rounds_played} / {total_rounds}<br>
+            <progress value="{progress}" max="1" style="width:100%; height:10px; border-radius:6px;"></progress>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("✅ Redirect EF contribution to Savings Goal"):
-            moved = player["allocation"]["ef"]
-            player["allocation"]["savings"] += moved
-            player["allocation"]["ef"] = 0
-            player["ef_full_alert"] = False
-            st.session_state.player = player
-            st.rerun()
-    with c2:
-        if st.button("✖️ Keep EF as is"):
-            player["ef_full_alert"] = False
-            st.session_state.player = player
-            st.rerun()
-    st.stop()
+
+st.markdown("---")
 
 # -------------------------------
-# Automatic contributions (post-round)
+# Automatic round contributions
 # -------------------------------
 if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
     ef_add = player["allocation"]["ef"]
     wants_add = player["allocation"]["wants"]
-    projected = player["ef_balance"] + ef_add
 
+    projected = player["ef_balance"] + ef_add
     if ef_add > 0 and projected >= player["ef_cap"] and not player.get("ef_full_alert", False):
         player["ef_full_alert"] = True
         st.session_state.player = player
@@ -86,19 +80,51 @@ if player.get("awaiting_round_start", False) and player["rounds_played"] > 0:
     st.session_state.player = player
 
 # -------------------------------
-# Layout
+# Row 2 – KPI Overview
 # -------------------------------
-left_col, right_col = st.columns([1.2, 1], gap="large")
+kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns([2, 1, 1, 1])
+
+with kpi_col1:
+    pct = player["savings"] / fs["goal"] if fs["goal"] > 0 else 0
+    st.markdown("### 💸 Savings Goal")
+    st.caption(player["goal_desc"])
+    st.progress(pct)
+    st.markdown(f"**{format_currency(player['savings'])} / {format_currency(fs['goal'])}** ({int(pct*100)}%)")
+
+with kpi_col2:
+    st.markdown("### 🛟 Emergency Fund")
+    st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
+    st.caption(f"Cap: {format_currency(player['ef_cap'])}")
+
+with kpi_col3:
+    st.markdown("### 🎉 Wants Fund")
+    st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
+    st.caption(f"Monthly add: {format_currency(player['allocation']['wants'])}")
+
+with kpi_col4:
+    st.markdown("### ❤️⚡ Wellbeing / Time")
+    st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
+    st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
+
+st.markdown("---")
 
 # -------------------------------
-# LEFT: Game Area
+# Row 3 – Game + Budget Area
+# -------------------------------
+left_col, right_col = st.columns([2, 1], gap="large")
+
+# -------------------------------
+# LEFT: Game area
 # -------------------------------
 with left_col:
-    progress_fraction = player["rounds_played"] / max(1, fs["rounds"])
-    st.progress(progress_fraction)
-    st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
+    st.subheader("🎴 Game Round")
 
-    # Determine allowed card types
+    game_over = player["rounds_played"] >= fs["rounds"]
+    draw_disabled = player.get("current_card") is not None or game_over
+
+    draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
+
+    # Card draw logic
     def allowed_types(round_idx, player):
         base = ["positive", "neutral", "negative_type_1"]
         if round_idx >= 4:
@@ -107,27 +133,19 @@ with left_col:
             base.append("temptation")
         return base
 
-    game_over = player["rounds_played"] >= fs["rounds"]
-    draw_disabled = player.get("current_card") is not None or game_over
-
-    if game_over:
-        st.success("🏁 Game finished! Great job.")
-
-    draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
-
     if draw and not draw_disabled:
         permitted = allowed_types(player["rounds_played"] + 1, player)
         pool = [c for c in st.session_state.life_cards if c.get("type") in permitted]
         if not pool:
-            st.error(f"No life cards available for round type(s): {permitted}. Please check life_cards.json.")
+            st.error("No life cards available for this stage. Please update life_cards.json.")
             st.stop()
         player["current_card"] = random.choice(pool)
         player["choice_made"] = False
         st.session_state.player = player
 
-    # Display current card
+    # Display card
     if not player.get("current_card"):
-        st.markdown("## 🎴 Draw a life card to start the month.")
+        st.markdown("🃏 Draw a life card to start the month.")
     else:
         card = player["current_card"]
         st.subheader(card.get("title", "Life Event"))
@@ -151,42 +169,33 @@ with left_col:
                     delta_wellbeing = selected.get("wellbeing", 0)
                     delta_time = selected.get("time", 0)
 
-                    # Time exhaustion check
+                    # Time exhaustion
                     if player["time"] <= 0 and delta_time > 0:
-                        st.warning("⏳ You don’t have enough energy for this choice — it won’t be applied.")
+                        st.warning("⏳ Not enough energy for this choice.")
                         st.stop()
 
-                    # Update wellbeing and time
-                    old_emotion = player["emotion"]
-                    player["emotion"] = max(0, min(10, old_emotion + delta_wellbeing))
+                    # Update wellbeing & time
+                    player["emotion"] = max(0, min(10, player["emotion"] + delta_wellbeing))
                     player["time"] = max(0, min(10, player["time"] - delta_time))
 
-                    # Burnout check
                     if player["emotion"] <= 0:
-                        st.error("💥 Burnout! Your wellbeing reached 0 — you’ve burned out and can’t continue.")
-                        st.markdown("Return to the group screen to discuss your results.")
+                        st.error("💥 Burnout! Your wellbeing reached 0 — game over for you.")
                         st.stop()
 
-                    # -----------------------
-                    # MONEY HANDLING LOGIC
-                    # -----------------------
+                    # Spending / income logic
                     if delta_money < 0 and delta_wellbeing > 0:
-                        # Spending for wellbeing (Wants → Savings hierarchy)
                         cost = abs(delta_money)
                         wants = player["wants_balance"]
                         savings = player["savings"]
 
                         if wants >= cost:
-                            # Fully covered by wants
                             player["wants_balance"] -= cost
-
                         else:
-                            # Wants insufficient → check savings
                             shortfall = cost - wants
                             if savings >= shortfall:
                                 st.warning(
                                     f"You only have {format_currency(wants)} in your Wants fund. "
-                                    f"The remaining {format_currency(shortfall)} will be deducted from your Savings Goal."
+                                    f"The remaining {format_currency(shortfall)} will be deducted from Savings."
                                 )
                                 if st.button("Acknowledge and Continue"):
                                     player["wants_balance"] = 0
@@ -196,19 +205,16 @@ with left_col:
                             else:
                                 st.error(
                                     f"🚫 Insufficient funds! You need {format_currency(cost)}, "
-                                    f"but only have {format_currency(wants)} in Wants and {format_currency(savings)} in Savings. "
-                                    f"Please pick another option."
+                                    f"but have only {format_currency(wants)} (Wants) and "
+                                    f"{format_currency(savings)} (Savings). Choose another option."
                                 )
                                 st.stop()
-
                     elif card.get("ef_eligible", False) and delta_money < 0:
-                        # Emergency fund applies
                         need = abs(delta_money)
                         cover = min(player["ef_balance"], need)
                         player["ef_balance"] -= cover
                         player["savings"] -= (need - cover)
                     else:
-                        # Regular income/expense
                         player["savings"] += delta_money
 
                     # End round
@@ -223,57 +229,35 @@ with left_col:
                     st.success("✅ Decision saved! Stats updated.")
                     time.sleep(0.6)
                     st.rerun()
-        else:
-            st.warning("⚠️ This card has no available options.")
 
 # -------------------------------
-# RIGHT: Player Stats
+# RIGHT: Budget overview
 # -------------------------------
 with right_col:
-    st.markdown("### 🧍 Player Stats")
-    st.markdown(f"**{player['name']} ({player['team']})**")
-
-    pct = player["savings"] / fs["goal"] if fs["goal"] > 0 else 0
-    st.progress(pct)
-    st.markdown(f"**Savings:** {format_currency(player['savings'])} ({int(pct * 100)}%)")
-    st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
-    st.markdown(f"**Wellbeing:** {render_emoji_stat(player['emotion'], '❤️')}")
-    st.divider()
-
+    st.subheader("💰 Budget Overview")
     remaining = player["income"] - player["fixed_costs"]
     st.markdown(f"**Monthly Income:** {format_currency(player['income'])}")
     st.markdown(f"**Fixed Costs:** {format_currency(player['fixed_costs'])}")
     st.markdown(f"**Remaining:** {format_currency(remaining)}")
 
     st.markdown("---")
-    st.markdown("### 💰 Budget Allocation")
-
     wants = st.number_input("Wants", min_value=0, max_value=remaining, value=int(player["allocation"]["wants"]), step=50)
     ef = st.number_input("Emergency Fund", min_value=0, max_value=remaining, value=int(player["allocation"]["ef"]), step=50)
     savings = st.number_input("Savings Goal", min_value=0, max_value=remaining, value=int(player["allocation"]["savings"]), step=50)
 
     if st.button("💾 Save Budget"):
         if wants + ef + savings != remaining:
-            st.warning(f"Allocations must equal remaining budget ({format_currency(remaining)}).")
+            st.warning(f"Allocations must equal remaining ({format_currency(remaining)}).")
         else:
             player["allocation"] = {"wants": wants, "ef": ef, "savings": savings}
             st.session_state.player = player
             st.success("✅ Budget updated!")
 
-    st.markdown("---")
-    st.markdown("### 🛟 Emergency Fund")
-    st.markdown(f"**Balance:** {format_currency(player['ef_balance'])}")
-    st.markdown(f"**Cap:** {format_currency(player['ef_cap'])}")
-    st.markdown("---")
-    st.markdown("### 🎉 Wants Fund")
-    st.markdown(f"**Balance:** {format_currency(player['wants_balance'])}")
-
 # -------------------------------
-# Decision Log
+# Decision log
 # -------------------------------
 st.markdown("---")
 st.subheader("🧾 Decision Log")
-
 if player["decision_log"]:
     for i, d in enumerate(player["decision_log"], 1):
         st.write(f"**Round {i}:** {d}")
