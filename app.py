@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_extras.switch_page_button import switch_page  # ensure streamlit-extras is installed
 
 # ----------------------------------------
 # Initialize session state
@@ -12,6 +11,7 @@ if "facilitator_settings" not in st.session_state:
         "fixed_costs": 1000,
     }
 
+st.set_page_config(page_title="Savings Monopoly Setup", layout="centered")
 st.title("💰 Savings Monopoly — Setup")
 
 # ----------------------------------------
@@ -80,6 +80,7 @@ with st.form("create_player_form"):
                 "savings": 0,
                 "emotion": 5,
                 "time": 5,
+                "decision_log": [],
             }
             st.success(f"✅ Player {name} created! Redirecting to game...")
-            switch_page("pages/game.py")
+            st.switch_page("pages/game.py")

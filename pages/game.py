@@ -1,7 +1,6 @@
 import streamlit as st
 import random
 import json
-from streamlit_extras.switch_page_button import switch_page
 
 # -------------------------------
 # Verify session state
@@ -12,6 +11,8 @@ if "player" not in st.session_state or "facilitator_settings" not in st.session_
 
 player = st.session_state.player
 fs = st.session_state.facilitator_settings
+
+st.set_page_config(page_title="Savings Monopoly Game", layout="wide")
 
 # -------------------------------
 # Load life cards
@@ -25,7 +26,8 @@ except Exception:
 # -------------------------------
 # Helper functions
 # -------------------------------
-def format_currency(n): return f"SAR {n:,.0f}"
+def format_currency(n):
+    return f"SAR {n:,.0f}"
 
 def apply_option(player, option):
     player["emotion"] = max(0, min(10, player["emotion"] + option.get("wellbeing", 0)))
@@ -43,13 +45,12 @@ def apply_option(player, option):
     else:
         player["savings"] += money
     player["rounds_played"] += 1
+    player["decision_log"].append(f"{option.get('card_title', '')} — {option.get('text', '')}")
     return player
 
 # -------------------------------
 # Layout
 # -------------------------------
-st.set_page_config(page_title="Savings Monopoly Game", layout="wide")
-
 game_col, stats_col = st.columns([1.3, 1.7], gap="large")
 
 # -------------------------------
@@ -60,7 +61,7 @@ with game_col:
     if player["rounds_played"] >= fs["rounds"]:
         st.success("✅ All rounds complete!")
         if st.button("🎉 View Results"):
-            switch_page("pages/results.py")
+            st.switch_page("pages/results.py")
         st.stop()
 
     st.markdown("## 🎴 Draw Life Card")
@@ -87,7 +88,7 @@ with game_col:
                 st.session_state.player = player
                 st.session_state.current_card = None
                 st.success("Decision applied!")
-                st.experimental_rerun()
+                st.rerun()
 
 # -------------------------------
 # Right column — player stats
@@ -102,10 +103,11 @@ with stats_col:
     st.markdown(
         f"""
         <div style='background-color:#fff;
-                    padding:20px 24px;
+                    padding:22px;
                     border-radius:18px;
                     border:1px solid #e5e7eb;
                     overflow-wrap:break-word;
+                    white-space:normal;
                     box-sizing:border-box;'>
             <h3 style="margin-bottom:0;">{player['name']}</h3>
             <div style="color:#6b7280; font-size:13px;">{player['team']}</div>
@@ -151,7 +153,7 @@ with stats_col:
 # -------------------------------
 st.markdown("---")
 st.subheader("🧾 Decision Log")
-if "decision_log" in player and player["decision_log"]:
+if player["decision_log"]:
     for entry in reversed(player["decision_log"]):
         st.markdown(f"- {entry}")
 else:

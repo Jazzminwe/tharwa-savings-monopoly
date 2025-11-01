@@ -1,5 +1,6 @@
 import streamlit as st
 
+st.set_page_config(page_title="Results", layout="centered")
 st.title("🏁 Game Results")
 
 if "player" not in st.session_state:
@@ -12,6 +13,7 @@ fs = st.session_state.facilitator_settings
 st.markdown(f"### Congratulations, {player['name']} from Team {player['team']}!")
 st.markdown(f"**Total Savings:** SAR {player['savings']:,}")
 st.markdown(f"**Savings Goal:** SAR {fs['goal']:,}")
+
 pct = int((player["savings"] / max(1, fs["goal"])) * 100)
 st.progress(min(pct / 100, 1))
 st.markdown(f"**Goal Achievement:** {pct}%")
@@ -20,3 +22,6 @@ st.markdown(f"**Final Energy:** {player['time']} ⚡")
 st.markdown(f"**Final Well-being:** {player['emotion']} ❤️")
 
 st.info("📊 A summary or leaderboard for all players can go here later.")
+
+if st.button("🔙 Back to Setup"):
+    st.switch_page("app.py")
