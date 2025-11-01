@@ -46,41 +46,43 @@ p.setdefault("wants_balance", 0)
 p.setdefault("allocation", {"savings": 0, "ef": 0, "wants": 0})
 
 # -------------------------------------------------
-# Style
+# Style (fixed header layout)
 # -------------------------------------------------
 st.markdown("""
 <style>
 div.block-container {
   max-width: 1280px;
-  padding-top: 2rem;
+  padding-top: 3rem; /* more breathing space at top */
 }
 
 /* Header layout */
 .header-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.2rem;
+  align-items: flex-start; /* align top edge cleanly */
+  margin-bottom: 1.5rem;
+  padding-top: 0.5rem;
 }
 .header-title {
-  font-size: 1.8rem; /* larger title */
+  font-size: 1.8rem;
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.25;
+  margin: 0;
 }
 .rounds {
   text-align: right;
   font-size: 0.9rem;
-  margin-top: 0.3rem;
 }
 .rounds progress {
-  width: 160px;
+  width: 180px;         /* a bit wider */
   height: 8px;
   border-radius: 4px;
   accent-color: #1f6feb;
-  margin-top: 4px;
+  display: block;
+  margin-top: 0.4rem;   /* spacing between label & bar */
 }
 
-/* Hierarchy: KPI vs. section */
+/* Section hierarchy */
 h4 { font-size: 1rem !important; font-weight: 700 !important; }
 .section-title { font-size: 1.1rem; font-weight: 750; margin-top: 1rem; }
 
@@ -92,15 +94,12 @@ div[data-testid="stNumberInput"] > div { width: 100% !important; }
 div[data-testid="stNumberInput"] input { width: 100% !important; font-size: 0.9rem; }
 
 /* Progress bar */
-.stProgress > div > div {
-  height: 6px !important;
-  border-radius: 3px !important;
-}
+.stProgress > div > div { height: 6px !important; border-radius: 3px !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# Header
+# Header (clean + aligned)
 # -------------------------------------------------
 rp = p["rounds_played"]
 tr = fs.get("rounds", 10)
@@ -110,11 +109,13 @@ st.markdown(f"""
 <div class="header-row">
   <div class="header-title">💰 Savings Monopoly</div>
   <div class="rounds">
-    <b>Game Progress:</b> {rp}/{tr}
-    <br><progress value="{pct_rounds}" max="1"></progress>
+    <div><b>Game Progress</b></div>
+    <progress value="{pct_rounds}" max="1"></progress>
+    <div>{rp}/{tr} rounds played</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
+
 
 # -------------------------------------------------
 # KPI Row
