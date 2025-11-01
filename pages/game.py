@@ -54,51 +54,66 @@ st.session_state.player = player
 st.set_page_config(layout="wide")
 
 # -------------------------------
-# Styling
+# Styling (FINAL FIXED)
 # -------------------------------
 st.markdown("""
 <style>
-div.block-container { padding-top: 0rem !important; }
+/* remove padding and background wrappers */
+div.block-container {
+    padding-top: 0rem !important;
+}
+section.main {
+    background: transparent !important;
+}
 section.main > div:first-child {
     background: transparent !important;
     box-shadow: none !important;
     border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
-section.main { background-color: transparent !important; }
+section.main div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: transparent !important;
+    box-shadow: none !important;
+}
 
-/* header */
+/* header styling */
 .header-row {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-bottom: 1.5rem;
-    padding: 0 0.2rem;
+    margin-bottom: 1.2rem;
+    padding: 0 0.5rem;
 }
 .header-title {
     font-size: 2rem;
-    font-weight: 700;
-    line-height: 1.2;
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0;
 }
 .rounds {
     text-align: right;
     font-size: 0.95rem;
+    margin-bottom: 0;
 }
 .rounds progress {
-    width: 130px;
+    width: 140px;
     height: 6px;
-    border-radius: 4px;
+    border-radius: 3px;
     accent-color: #007bff;
     margin-top: 4px;
 }
 
-/* KPI cards */
+/* KPI boxes only */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) {
-    background: #ffffff;
+    background: #fff !important;
     border-radius: 18px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    padding: 16px 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    padding: 18px 20px !important;
     height: 100%;
 }
+
+/* smaller headings in KPI */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h4,
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
     font-size: 1rem !important;
@@ -114,8 +129,8 @@ div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
 
 /* compact columns */
 div[data-testid="column"] {
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -136,6 +151,7 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
 
 # -------------------------------
 # KPI Row
