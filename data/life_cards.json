@@ -1,88 +1,255 @@
 [
-    {
-      "type": "Negative",
-      "title": "Your electricity bill was higher by SAR 300",
-      "options": [
-        {"text": "Use savings", "money": -300, "wellbeing": 0, "time": 0},
-        {"text": "Use emergency fund", "money": -300, "wellbeing": 0, "time": 0},
-        {"text": "Reduce spending elsewhere", "money": -300, "wellbeing": 0, "time": 0}
-      ]
-    },
-    {
-      "type": "Negative",
-      "title": "You lost your part-time shift this week — SAR 500 less income",
-      "options": [
-        {"text": "Reduce spending", "money": -500, "wellbeing": 0, "time": 0},
-        {"text": "Delay your goal", "money": 0, "wellbeing": 0, "time": 0},
-        {"text": "Earn extra elsewhere", "money": 500, "wellbeing": 0, "time": -1}
-      ]
-    },
-    {
-      "type": "Negative",
-      "title": "You're feeling exhausted. You need a break day",
-      "options": [
-        {"text": "Take a break", "money": -300, "wellbeing": 1, "time": 1},
-        {"text": "Push through", "money": 0, "wellbeing": 0, "time": 0}
-      ]
-    },
-    {
-      "type": "Positive",
-      "title": "You received a SAR 500 bonus this month",
-      "options": [
-        {"text": "Add to savings", "money": 500, "wellbeing": 0, "time": 0},
-        {"text": "Add to emergency fund", "money": 500, "wellbeing": 0, "time": 0},
-        {"text": "Enjoy something", "money": 0, "wellbeing": 1, "time": 0}
-      ]
-    },
-    {
-      "type": "Positive",
-      "title": "You found SAR 100 in an old wallet",
-      "options": [
-        {"text": "Save it", "money": 100, "wellbeing": 0, "time": 0},
-        {"text": "Spend it", "money": -100, "wellbeing": 1, "time": 0},
-        {"text": "Split", "money": 50, "wellbeing": 0, "time": 0}
-      ]
-    },
-    {
-      "type": "Neutral",
-      "title": "You're invited to a last-minute weekend trip (SAR 700)",
-      "options": [
-        {"text": "Join", "money": -700, "wellbeing": 1, "time": -1},
-        {"text": "Skip", "money": 0, "wellbeing": 0, "time": 0}
-      ]
-    },
-    {
-      "type": "Neutral",
-      "title": "You have a free evening. Freelance for SAR 300 or rest at home?",
-      "options": [
-        {"text": "Freelance", "money": 300, "wellbeing": 0, "time": -1},
-        {"text": "Rest", "money": 0, "wellbeing": 0, "time": 1}
-      ]
-    },
-    {
-      "type": "Neutral",
-      "title": "Flash sale! Your dream shoes are now SAR 650",
-      "options": [
-        {"text": "Buy them", "money": -650, "wellbeing": 1, "time": 0},
-        {"text": "Skip", "money": 0, "wellbeing": 0, "time": 0}
-      ]
-    },
-    {
-      "type": "Neutral",
-      "title": "A personal development course is available for SAR 1,000",
-      "options": [
-        {"text": "Enroll", "money": -1000, "wellbeing": 0, "time": 1},
-        {"text": "Delay", "money": 0, "wellbeing": 0, "time": 0}
-      ]
-    },
-    {
-      "type": "Positive",
-      "title": "A friend covered your coffee and lunch today — you saved SAR 60",
-      "options": [
-        {"text": "Use for fun", "money": -60, "wellbeing": 1, "time": 0},
-        {"text": "Save it", "money": 60, "wellbeing": 0, "time": 0},
-        {"text": "Emotional boost", "money": 0, "wellbeing": 1, "time": 0}
-      ]
-    }
-  ]
-  
+  {
+    "title": "Car Repair Surprise",
+    "description": "Your car broke down unexpectedly. You can either fix it now, take the bus, or carpool.",
+    "type": "negative_type_2",
+    "ef_eligible": true,
+    "options": [
+      {
+        "label": "Fix it immediately",
+        "money": -800,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Take the bus for now",
+        "money": 200,
+        "wellbeing": -1,
+        "time": -1
+      },
+      {
+        "label": "Carpool with a friend",
+        "money": 400,
+        "wellbeing": 0,
+        "time": 0
+      }
+    ]
+  },
+  {
+    "title": "Work Overload Offer",
+    "description": "Your boss offers paid weekend work. You're already feeling tired though.",
+    "type": "neutral",
+    "options": [
+      {
+        "label": "Accept extra shifts",
+        "money": 600,
+        "wellbeing": -2,
+        "time": -1
+      },
+      {
+        "label": "Decline politely",
+        "money": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Negotiate flexible hours",
+        "money": 300,
+        "wellbeing": 0,
+        "time": 0
+      }
+    ]
+  },
+  {
+    "title": "Friend’s Birthday Dinner",
+    "description": "A close friend invites you to a fancy dinner celebration.",
+    "type": "positive",
+    "options": [
+      {
+        "label": "Skip the dinner",
+        "money": 200,
+        "wellbeing": -1,
+        "time": 1
+      },
+      {
+        "label": "Attend and spend modestly",
+        "money": -100,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Go all out and celebrate",
+        "money": -400,
+        "wellbeing": 2,
+        "time": 0
+      }
+    ]
+  },
+  {
+    "title": "Rest and Recharge",
+    "description": "It’s the weekend! You can rest, work extra hours, or go shopping.",
+    "type": "positive",
+    "options": [
+      {
+        "label": "Stay home and rest",
+        "money": 0,
+        "wellbeing": 2,
+        "time": 1
+      },
+      {
+        "label": "Take a freelance gig",
+        "money": 400,
+        "wellbeing": -1,
+        "time": -1
+      },
+      {
+        "label": "Go shopping for fun",
+        "money": -300,
+        "wellbeing": 1,
+        "time": 0
+      }
+    ]
+  },
+  {
+    "title": "Rent Increase",
+    "description": "Your landlord raises your rent unexpectedly. You can accept, move, or negotiate.",
+    "type": "negative_type_1",
+    "options": [
+      {
+        "label": "Accept the increase",
+        "money": -300,
+        "wellbeing": 0,
+        "time": 0
+      },
+      {
+        "label": "Move to a smaller apartment",
+        "money": 200,
+        "wellbeing": -1,
+        "time": -1
+      },
+      {
+        "label": "Negotiate calmly",
+        "money": -100,
+        "wellbeing": 1,
+        "time": 0
+      }
+    ]
+  },
+  {
+    "title": "New Hobby Discovery",
+    "description": "You found an art class nearby. It costs a bit but helps you relax.",
+    "type": "positive",
+    "options": [
+      {
+        "label": "Join weekly",
+        "money": -150,
+        "wellbeing": 2,
+        "time": -1
+      },
+      {
+        "label": "Skip it",
+        "money": 150,
+        "wellbeing": -1,
+        "time": 0
+      },
+      {
+        "label": "Attend occasionally",
+        "money": -50,
+        "wellbeing": 1,
+        "time": 0
+      }
+    ]
+  },
+  {
+    "title": "Unexpected Medical Bill",
+    "description": "You catch the flu and need medication and rest. This might hit your budget.",
+    "type": "negative_type_2",
+    "ef_eligible": true,
+    "options": [
+      {
+        "label": "Go to a private clinic",
+        "money": -600,
+        "wellbeing": 1,
+        "time": -1
+      },
+      {
+        "label": "Use public healthcare",
+        "money": -200,
+        "wellbeing": 0,
+        "time": -2
+      },
+      {
+        "label": "Ignore and push through",
+        "money": 0,
+        "wellbeing": -3,
+        "time": 0
+      }
+    ]
+  },
+  {
+    "title": "Phone Upgrade Temptation",
+    "description": "Your favorite phone brand launches a new model.",
+    "type": "negative_type_1",
+    "options": [
+      {
+        "label": "Buy it immediately",
+        "money": -800,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Skip the upgrade",
+        "money": 200,
+        "wellbeing": 0,
+        "time": 0
+      },
+      {
+        "label": "Wait for a discount",
+        "money": 0,
+        "wellbeing": 0,
+        "time": 0
+      }
+    ]
+  },
+  {
+    "title": "Unexpected Family Expense",
+    "description": "A family member needs urgent help covering medical costs.",
+    "type": "negative_type_2",
+    "ef_eligible": true,
+    "options": [
+      {
+        "label": "Cover part of the cost",
+        "money": -500,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Cover all costs",
+        "money": -900,
+        "wellbeing": 2,
+        "time": -1
+      },
+      {
+        "label": "Decline (they’ll understand)",
+        "money": 0,
+        "wellbeing": -2,
+        "time": 0
+      }
+    ]
+  },
+  {
+    "title": "Performance Bonus!",
+    "description": "You receive a surprise bonus at work. What will you do?",
+    "type": "positive",
+    "options": [
+      {
+        "label": "Add it to savings",
+        "money": 500,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Add to your emergency fund",
+        "money": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Treat yourself to something nice",
+        "money": -200,
+        "wellbeing": 2,
+        "time": 0
+      }
+    ]
+  }
+]
