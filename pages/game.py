@@ -28,7 +28,6 @@ if "player" not in st.session_state or "facilitator_settings" not in st.session_
 player = st.session_state.player
 fs = st.session_state.facilitator_settings
 
-# ---- Safe defaults ----
 player.setdefault("rounds_played", 0)
 player.setdefault("savings", 0)
 player.setdefault("emotion", 5)
@@ -59,34 +58,47 @@ st.set_page_config(layout="wide")
 # -------------------------------
 st.markdown("""
 <style>
-div.block-container { padding-top: 0.5rem !important; }
+div.block-container { padding-top: 0rem !important; }
+section.main > div:first-child {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+section.main { background-color: transparent !important; }
 
-/* Header */
+/* header */
 .header-row {
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
     margin-bottom: 1.5rem;
+    padding: 0 0.2rem;
 }
 .header-title {
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 700;
+    line-height: 1.2;
 }
 .rounds {
     text-align: right;
     font-size: 0.95rem;
 }
-
-/* KPI cards only */
-div[data-testid="stVerticalBlock"]:has(.kpi-marker) {
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    padding: 14px 18px;
-    height: 100%;
+.rounds progress {
+    width: 130px;
+    height: 6px;
+    border-radius: 4px;
+    accent-color: #007bff;
+    margin-top: 4px;
 }
 
-/* Inner text */
+/* KPI cards */
+div[data-testid="stVerticalBlock"]:has(.kpi-marker) {
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    padding: 16px 20px;
+    height: 100%;
+}
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h4,
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
     font-size: 1rem !important;
@@ -94,17 +106,17 @@ div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
     font-weight: 600;
 }
 
-/* Remove outer white container */
-section.main > div:nth-child(1),
-section.main > div:nth-child(1) > div:first-child {
-    background: none !important;
-    box-shadow: none !important;
-    border: none !important;
+/* progress bars */
+.stProgress > div > div {
+    height: 6px !important;
+    border-radius: 3px !important;
 }
 
-/* Column spacing */
-div[data-testid="column"] { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-.stProgress > div > div { height: 6px !important; border-radius: 4px !important; }
+/* compact columns */
+div[data-testid="column"] {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -119,10 +131,8 @@ st.markdown(f"""
 <div class="header-row">
     <div class="header-title">💰 Savings Monopoly</div>
     <div class="rounds">
-        <b>Rounds:</b> {rp}/{tr}
-        <div style="width:120px; margin-top:3px;">
-            <progress value="{pct_rounds}" max="1" style="width:100%; height:6px;"></progress>
-        </div>
+        <b>Rounds:</b> {rp}/{tr}<br>
+        <progress value="{pct_rounds}" max="1"></progress>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -155,12 +165,7 @@ with k1:
 
     goal_value = fs.get("goal", 0)
     savings_value = player.get("savings", 0)
-
-    try:
-        pct = float(savings_value) / float(goal_value) if goal_value else 0.0
-    except Exception:
-        pct = 0.0
-    pct = max(0.0, min(1.0, pct))  # clamp
+    pct = max(0.0, min(1.0, float(savings_value) / float(goal_value))) if goal_value else 0.0
 
     st.progress(pct)
     st.markdown(f"**{format_currency(savings_value)} / {format_currency(goal_value)}** ({int(pct * 100)}%)")
