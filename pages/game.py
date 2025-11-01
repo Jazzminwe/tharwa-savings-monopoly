@@ -20,7 +20,7 @@ def render_emoji_stat(value, emoji, max_value=10):
 
 
 # -------------------------------
-# Check for required session data
+# Ensure session data exists
 # -------------------------------
 if "player" not in st.session_state or "facilitator_settings" not in st.session_state:
     st.warning("No player data found. Please start from the setup page.")
@@ -29,7 +29,7 @@ if "player" not in st.session_state or "facilitator_settings" not in st.session_
 player = st.session_state.player
 fs = st.session_state.facilitator_settings
 
-# ---- Safe backfill for all player keys ----
+# ---- Safe defaults ----
 player.setdefault("rounds_played", 0)
 player.setdefault("savings", 0)
 player.setdefault("emotion", 5)
@@ -37,7 +37,6 @@ player.setdefault("time", 5)
 player.setdefault("decision_log", [])
 player.setdefault("current_card", None)
 player.setdefault("choice_made", False)
-player.setdefault("awaiting_round_start", False)
 player.setdefault("income", fs.get("income", 0))
 player.setdefault("fixed_costs", fs.get("fixed_costs", 0))
 player.setdefault("ef_cap", player.get("ef_cap", 2000))
@@ -57,35 +56,31 @@ st.session_state.player = player
 st.set_page_config(layout="wide")
 
 # -------------------------------
-# Custom Styling
+# Styling: only KPI cards boxed
 # -------------------------------
 st.markdown("""
 <style>
 div.block-container { padding-top: 1rem !important; }
 
-/* KPI cards: clean white, equal height */
+/* KPI cards only */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) {
     background: #ffffff;
-    border-radius: 14px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.10);
-    padding: 12px 16px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    padding: 14px 18px;
     height: 100%;
 }
 
-/* Smaller heading size inside cards */
+/* Headings inside KPI boxes */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h4,
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
     font-size: 1rem !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 6px !important;
     font-weight: 600;
 }
 
-/* Tight number inputs */
-div[data-testid="stNumberInputContainer"] > div { margin-top: 0 !important; }
-
-/* Reduce gaps between columns */
-div[data-testid="column"] { padding-left: 0.4rem !important; padding-right: 0.4rem !important; }
-
+/* Column gap and progress bar styling */
+div[data-testid="column"] { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
 .stProgress > div > div { height: 6px !important; border-radius: 4px !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -98,9 +93,9 @@ with left_h:
     st.markdown("## 💰 Savings Monopoly")
 with right_h:
     rp = player["rounds_played"]
-    tr = fs["rounds"]
+    tr = fs.get("rounds", 12)
     st.write(f"**Rounds:** {rp}/{tr}")
-    st.progress(rp / max(1, tr))
+    st.progress(min(1.0, max(0.0, float(rp) / max(1, float(tr)))))
 
 # -------------------------------
 # KPI Row
@@ -127,9 +122,18 @@ with k1:
     st.markdown('<span class="kpi-marker"></span>', unsafe_allow_html=True)
     st.markdown("#### 💸 Savings Goal")
     st.caption(player.get("goal_desc", ""))
-    pct = player["savings"] / fs["goal"] if fs["goal"] else 0
-    st.progress(min(1.0, pct))
-    st.markdown(f"**{format_currency(player['savings'])} / {format_currency(fs['goal'])}** ({int(pct*100)}%)")
+
+    goal_value = fs.get("goal", 0)
+    savings_value = player.get("savings", 0)
+
+    try:
+        pct = float(savings_value) / float(goal_value) if goal_value else 0.0
+    except Exception:
+        pct = 0.0
+    pct = max(0.0, min(1.0, pct))  # clamp to 0–1
+
+    st.progress(pct)
+    st.markdown(f"**{format_currency(savings_value)} / {format_currency(goal_value)}** ({int(pct * 100)}%)")
 
 # --- Emergency Fund
 with k2:
@@ -169,7 +173,7 @@ with k4:
 # -------------------------------
 # Reflection logic — when goal reached
 # -------------------------------
-if player["savings"] >= fs["goal"]:
+if player["savings"] >= fs.get("goal", 0) and fs.get("goal", 0) > 0:
     st.markdown("---")
     st.markdown("""
     ### 🎉 Congratulations — You’ve Reached Your Savings Goal!
@@ -189,7 +193,7 @@ left_col, right_col = st.columns([2, 1], gap="large")
 # --- Game section
 with left_col:
     st.markdown("### 🎴 Game Round")
-    draw_disabled = player.get("current_card") is not None or player["rounds_played"] >= fs["rounds"]
+    draw_disabled = player.get("current_card") is not None or player["rounds_played"] >= fs.get("rounds", 12)
     draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
 
     if "life_cards" not in st.session_state:
@@ -200,7 +204,7 @@ with left_col:
         base = ["positive", "neutral", "negative_type_1"]
         if round_idx >= 4:
             base.append("negative_type_2")
-        if p["savings"] >= fs["goal"] * 0.6:
+        if p["savings"] >= fs.get("goal", 0) * 0.6:
             base.append("temptation")
         return base
 
@@ -227,9 +231,7 @@ with left_col:
             money = opt.get("money", 0)
             wellbeing = opt.get("wellbeing", 0)
             time_cost = opt.get("time", 0)
-            options.append(
-                f"{label} → Money: {money}, Wellbeing: {wellbeing}, Time: {time_cost}"
-            )
+            options.append(f"{label} → Money: {money}, Wellbeing: {wellbeing}, Time: {time_cost}")
 
         if options:
             choice = st.radio("Choose an option:", options, key="decision_choice")
