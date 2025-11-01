@@ -61,7 +61,7 @@ st.markdown("""
 <style>
 div.block-container { padding-top: 0.5rem !important; }
 
-/* Header layout */
+/* Header */
 .header-row {
     display: flex; 
     justify-content: space-between; 
@@ -86,7 +86,7 @@ div[data-testid="stVerticalBlock"]:has(.kpi-marker) {
     height: 100%;
 }
 
-/* Headings inside KPI boxes */
+/* Inner text */
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h4,
 div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
     font-size: 1rem !important;
@@ -94,15 +94,17 @@ div[data-testid="stVerticalBlock"]:has(.kpi-marker) h5 {
     font-weight: 600;
 }
 
-/* Columns & spacing */
-div[data-testid="column"] { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-.stProgress > div > div { height: 6px !important; border-radius: 4px !important; }
-
-/* Remove any global white wrapper effect */
-section.main > div:nth-child(1) {
+/* Remove outer white container */
+section.main > div:nth-child(1),
+section.main > div:nth-child(1) > div:first-child {
     background: none !important;
     box-shadow: none !important;
+    border: none !important;
 }
+
+/* Column spacing */
+div[data-testid="column"] { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+.stProgress > div > div { height: 6px !important; border-radius: 4px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -158,7 +160,7 @@ with k1:
         pct = float(savings_value) / float(goal_value) if goal_value else 0.0
     except Exception:
         pct = 0.0
-    pct = max(0.0, min(1.0, pct))  # clamp to 0–1
+    pct = max(0.0, min(1.0, pct))  # clamp
 
     st.progress(pct)
     st.markdown(f"**{format_currency(savings_value)} / {format_currency(goal_value)}** ({int(pct * 100)}%)")
@@ -199,26 +201,15 @@ with k4:
     st.markdown(f"**Time:** {render_emoji_stat(player['time'], '⚡')}")
 
 # -------------------------------
-# Reflection logic — when goal reached
+# Game logic
 # -------------------------------
 if player["savings"] >= fs.get("goal", 0) and fs.get("goal", 0) > 0:
     st.markdown("---")
-    st.markdown("""
-    ### 🎉 Congratulations — You’ve Reached Your Savings Goal!
-    You’ve balanced income, needs, and wellbeing over the year.  
-    Before moving to investing later in the workshop, reflect briefly:
-    - What helped you reach your goal?
-    - What tradeoffs were hardest?
-    - What would you keep doing next month?
-    """)
+    st.markdown("### 🎉 You’ve reached your goal! Reflect before investing next.")
     st.stop()
 
-# -------------------------------
-# Game + Budget Overview
-# -------------------------------
 left_col, right_col = st.columns([2, 1], gap="large")
 
-# --- Game section
 with left_col:
     st.markdown("### 🎴 Game Round")
     draw_disabled = player.get("current_card") is not None or player["rounds_played"] >= fs.get("rounds", 12)
@@ -240,7 +231,7 @@ with left_col:
         permitted = allowed_types(player["rounds_played"] + 1, player)
         pool = [c for c in st.session_state.life_cards if c.get("type") in permitted]
         if not pool:
-            st.error("No available life cards for this round.")
+            st.error("No available life cards.")
             st.stop()
         player["current_card"] = random.choice(pool)
         player["choice_made"] = False
@@ -270,6 +261,12 @@ with left_col:
                     delta_wellbeing = selected.get("wellbeing", 0)
                     delta_time = selected.get("time", 0)
 
+                    # ✅ MONEY VALIDATION
+                    total_available = player["wants_balance"] + player["savings"]
+                    if delta_money < 0 and abs(delta_money) > total_available:
+                        st.error("💸 Not enough funds! You can’t afford this choice.")
+                        st.stop()
+
                     if player["time"] <= 0 and delta_time > 0:
                         st.warning("⏳ Not enough energy for this choice.")
                         st.stop()
@@ -292,7 +289,6 @@ with left_col:
                     time.sleep(0.5)
                     st.rerun()
 
-# --- Budget Overview
 with right_col:
     st.markdown("### 💰 Budget Overview")
     st.markdown(f"**{player.get('name','')}** <span style='color:#888;'>({player.get('team','')})</span>", unsafe_allow_html=True)
@@ -300,9 +296,6 @@ with right_col:
     st.markdown(f"**Fixed Costs:** {format_currency(player['fixed_costs'])}")
     st.markdown(f"**Remaining:** {format_currency(remaining)}")
 
-# -------------------------------
-# Decision Log
-# -------------------------------
 st.markdown("---")
 st.subheader("🧾 Decision Log")
 if player["decision_log"]:
