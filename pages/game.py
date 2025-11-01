@@ -38,36 +38,12 @@ left_col, right_col = st.columns([1.2, 1], gap="large")
 # 🎴 LEFT: Game Area
 # -------------------------------
 with left_col:
-    # --- Box style for game area
-    st.markdown("""
-        <style>
-        .game-box {
-            background-color: #ffffff;
-            border-radius: 18px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.07);
-            padding: 25px 30px;
-            margin-bottom: 1.5rem;
-        }
-        .progress-bar {
-            width: 80%;
-            margin-top: 0.3rem;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="game-box">', unsafe_allow_html=True)
-
     # --- Button: disabled if card already active
     draw_disabled = player.get("current_card") is not None
     draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
 
-    # --- Progress bar
-    progress_fraction = player["rounds_played"] / fs["rounds"]
-    st.markdown(f"""
-        <div class="progress-bar">
-            <progress value="{progress_fraction}" max="1" style="width:100%; height:8px; border-radius:4px;"></progress>
-        </div>
-    """, unsafe_allow_html=True)
+    # --- Progress bar (slightly shorter)
+    st.progress(player["rounds_played"] / fs["rounds"])
     st.caption(f"Rounds Played: {player['rounds_played']} / {fs['rounds']}")
     st.write(" ")
 
@@ -123,26 +99,11 @@ with left_col:
         else:
             st.warning("⚠️ This card has no available options.")
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
 
 # -------------------------------
-# 🧍 RIGHT: Player Stats Card
+# 🧍 RIGHT: Player Stats
 # -------------------------------
 with right_col:
-    st.markdown("""
-        <style>
-        .player-card {
-            background-color: #ffffff;
-            border-radius: 18px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.07);
-            padding: 25px 30px;
-            margin-top: 0.3rem;
-        }
-        </style>
-        <div class="player-card">
-    """, unsafe_allow_html=True)
-
     st.markdown(f"### 🧍 {player['name']}")
     st.caption(f"Team: {player['team']}")
     st.write(" ")
@@ -191,8 +152,6 @@ with right_col:
             player["allocation"]["savings"] = new_savings
             st.session_state.player = player
             st.success("✅ Budget updated!")
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # -------------------------------
