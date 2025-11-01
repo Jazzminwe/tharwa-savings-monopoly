@@ -103,7 +103,7 @@ with stats_col:
     st.markdown(
         f"""
         <div style='background-color:#fff;
-                    padding:22px;
+                    padding:24px;
                     border-radius:18px;
                     border:1px solid #e5e7eb;
                     overflow-wrap:break-word;
@@ -112,11 +112,16 @@ with stats_col:
             <h3 style="margin-bottom:0;">{player['name']}</h3>
             <div style="color:#6b7280; font-size:13px;">{player['team']}</div>
             <br>
+
             <b>Savings Goal:</b> {player['goal_desc']}<br>
             <b>Current Savings:</b> {format_currency(player['savings'])}
             ({int((player['savings']/max(1,fs['goal']))*100)}%)<br>
-            <progress value="{player['savings']}" max="{fs['goal']}" style="width:100%;height:10px;"></progress>
-            <br><br>
+            <progress value="{player['savings']}" max="{fs['goal']}" style="width:100%;height:8px;border-radius:8px;"></progress>
+            <br>
+
+            <b>Energy:</b> {player['time']} ⚡<br>
+            <b>Well-being:</b> {player['emotion']} ❤️<br><br>
+
             <b>Monthly Income:</b> {format_currency(player['income'])}<br>
             <b>Fixed Expenses:</b> {format_currency(player['fixed_costs'])}<br>
             <b style="color:{color};">Remaining Budget:</b> {format_currency(remaining)}<br>
@@ -125,28 +130,44 @@ with stats_col:
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### 💰 Budget Allocation")
-    col1, col2, col3 = st.columns([1, 1, 0.7])
-    with col1:
-        new_wants = st.number_input("Wants (SAR)", min_value=0, max_value=remaining, value=wants_val, step=50)
-    with col2:
-        new_savings = st.number_input("Savings (SAR)", min_value=0, max_value=remaining, value=savings_val, step=50)
+    # Budget Allocation block
+    st.markdown(
+        "<h4 style='margin-top:1.5rem;'>💰 Budget Allocation</h4>"
+        "<p style='color:#6b7280;font-style:italic;margin-top:-10px;'>Adjust monthly allocation</p>",
+        unsafe_allow_html=True,
+    )
 
+    with st.container():
+        st.markdown(
+            """
+            <div style='background-color:#f9fafb;
+                        border:1px solid #e5e7eb;
+                        padding:16px;
+                        border-radius:12px;
+                        margin-bottom:10px;'>
+            """,
+            unsafe_allow_html=True,
+        )
+        col1, col2, col3 = st.columns([1, 1, 0.6])
+        with col1:
+            new_wants = st.number_input("Wants (SAR)", min_value=0, max_value=remaining, value=wants_val, step=50)
+        with col2:
+            new_savings = st.number_input("Savings (SAR)", min_value=0, max_value=remaining, value=savings_val, step=50)
+        with col3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.button("💾 Save", use_container_width=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Validate and update
     valid = (new_wants + new_savings) == remaining
-    with col3:
-        st.write("")  # spacing
-        st.button("💾 Save", disabled=not valid)
-
     if not valid:
-        st.warning(f"⚠️ Allocations must equal remaining budget ({remaining}).")
+        st.warning(f"⚠️ Allocations must equal remaining budget ({format_currency(remaining)}).")
     else:
         player["allocation"]["wants"] = new_wants
         player["allocation"]["savings"] = new_savings
         st.session_state.player = player
 
-    st.markdown("---")
-    st.markdown(f"**Energy:** {player['time']} ⚡")
-    st.markdown(f"**Well-being:** {player['emotion']} ❤️")
 
 # -------------------------------
 # Bottom — decision log (plain)
