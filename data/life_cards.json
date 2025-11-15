@@ -4,29 +4,94 @@
     "description": "A friend offers you a short weekend project for extra cash.",
     "type": "positive",
     "options": [
-      { "label": "Accept the job", "money": 400, "wellbeing": -1, "time": -1 },
-      { "label": "Politely decline", "money": 0, "wellbeing": 1, "time": 0 },
-      { "label": "Negotiate half-time work", "money": 200, "wellbeing": 0, "time": 0 }
+      {
+        "label": "Accept the job",
+        "savings_delta": 200,
+        "ef_delta": 0,
+        "wants_delta": 200,
+        "wellbeing": -1,
+        "time": -1
+      },
+      {
+        "label": "Politely decline",
+        "savings_delta": 0,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Negotiate half-time work",
+        "savings_delta": 150,
+        "ef_delta": 0,
+        "wants_delta": 50,
+        "wellbeing": 0,
+        "time": 0
+      }
     ]
   },
+
   {
     "title": "Performance Bonus",
     "description": "Your boss surprises you with a performance bonus!",
     "type": "positive",
     "options": [
-      { "label": "Add it to savings goal", "money": 500, "wellbeing": 1, "time": 0 },
-      { "label": "Add to emergency fund", "money": 0, "wellbeing": 1, "time": 0 },
-      { "label": "Celebrate with friends", "money": -150, "wellbeing": 2, "time": 0 }
+      {
+        "label": "Add fully to savings goal",
+        "savings_delta": 500,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Boost emergency fund",
+        "savings_delta": 0,
+        "ef_delta": 500,
+        "wants_delta": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Celebrate with friends",
+        "savings_delta": -200,
+        "ef_delta": 0,
+        "wants_delta": -300,
+        "wellbeing": 2,
+        "time": 0
+      }
     ]
   },
+
   {
     "title": "Healthy Routine",
     "description": "You start exercising regularly and eating better.",
     "type": "positive",
     "options": [
-      { "label": "Join a gym", "money": -200, "wellbeing": 2, "time": -1 },
-      { "label": "Exercise at home", "money": 0, "wellbeing": 1, "time": 0 },
-      { "label": "Do nothing new", "money": 0, "wellbeing": 0, "time": 0 }
+      {
+        "label": "Join a gym",
+        "savings_delta": -150,
+        "ef_delta": 0,
+        "wants_delta": -50,
+        "wellbeing": 2,
+        "time": -1
+      },
+      {
+        "label": "Exercise at home",
+        "savings_delta": 0,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Do nothing new",
+        "savings_delta": 0,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": 0,
+        "time": 0
+      }
     ]
   },
 
@@ -35,94 +100,222 @@
     "description": "Your manager asks if you can work late all week to finish a project.",
     "type": "neutral",
     "options": [
-      { "label": "Accept overtime", "money": 300, "wellbeing": -2, "time": -1 },
-      { "label": "Refuse to protect your energy", "money": 0, "wellbeing": 1, "time": 0 },
-      { "label": "Ask to share tasks", "money": 100, "wellbeing": 0, "time": 0 }
+      {
+        "label": "Accept overtime",
+        "savings_delta": 150,
+        "ef_delta": 0,
+        "wants_delta": 150,
+        "wellbeing": -2,
+        "time": -1
+      },
+      {
+        "label": "Protect your wellbeing",
+        "savings_delta": 0,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Negotiate shared workload",
+        "savings_delta": 50,
+        "ef_delta": 0,
+        "wants_delta": 50,
+        "wellbeing": 0,
+        "time": 0
+      }
     ]
   },
+
   {
-    "title": "Friend’s Birthday",
-    "description": "A close friend invites you to dinner at a nice restaurant.",
+    "title": "Friend's Birthday Dinner",
+    "description": "A close friend invites you to dinner at a fancy restaurant.",
     "type": "neutral",
     "options": [
-      { "label": "Skip the dinner", "money": 200, "wellbeing": -1, "time": 1 },
-      { "label": "Attend and spend modestly", "money": -100, "wellbeing": 1, "time": 0 },
-      { "label": "Go all out", "money": -400, "wellbeing": 2, "time": 0 }
+      {
+        "label": "Skip and send a small gift",
+        "savings_delta": 150,
+        "ef_delta": 0,
+        "wants_delta": -50,
+        "wellbeing": -1,
+        "time": 1
+      },
+      {
+        "label": "Attend and spend modestly",
+        "savings_delta": 0,
+        "ef_delta": 0,
+        "wants_delta": -150,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Go all out",
+        "savings_delta": -150,
+        "ef_delta": 0,
+        "wants_delta": -250,
+        "wellbeing": 2,
+        "time": 0
+      }
     ]
   },
+
   {
-    "title": "Online Shopping Sale",
-    "description": "You see a limited-time online sale on electronics.",
+    "title": "Online Shopping Temptation",
+    "description": "You see a limited-time sale on electronics.",
     "type": "neutral",
     "options": [
-      { "label": "Ignore it", "money": 200, "wellbeing": -1, "time": 0 },
-      { "label": "Buy one item", "money": -150, "wellbeing": 1, "time": 0 },
-      { "label": "Buy everything", "money": -600, "wellbeing": 2, "time": 0 }
+      {
+        "label": "Ignore it",
+        "savings_delta": 200,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": -1,
+        "time": 0
+      },
+      {
+        "label": "Buy one item",
+        "savings_delta": -50,
+        "ef_delta": 0,
+        "wants_delta": -150,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Upgrade everything",
+        "savings_delta": -200,
+        "ef_delta": 0,
+        "wants_delta": -400,
+        "wellbeing": 2,
+        "time": 0
+      }
     ]
   },
 
   {
     "title": "Minor Appliance Repair",
-    "description": "Your washing machine stops working; repairs are minor but urgent.",
+    "description": "Your washing machine stops working and needs a quick repair.",
     "type": "negative_type_1",
     "options": [
-      { "label": "Fix immediately", "money": -200, "wellbeing": 1, "time": 0 },
-      { "label": "Wait until next month", "money": 0, "wellbeing": -1, "time": 0 },
-      { "label": "Use laundromat temporarily", "money": -50, "wellbeing": 0, "time": -1 }
+      {
+        "label": "Use emergency fund to fix",
+        "savings_delta": 0,
+        "ef_delta": -200,
+        "wants_delta": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Pay from savings",
+        "savings_delta": -200,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": 0,
+        "time": 0
+      },
+      {
+        "label": "Use laundromat temporarily",
+        "savings_delta": 0,
+        "ef_delta": 0,
+        "wants_delta": -50,
+        "wellbeing": 0,
+        "time": -1
+      }
     ]
   },
+
   {
     "title": "Rent Increase",
     "description": "Your landlord raises your rent slightly.",
     "type": "negative_type_1",
     "options": [
-      { "label": "Accept the new rent", "money": -300, "wellbeing": 0, "time": 0 },
-      { "label": "Negotiate", "money": -100, "wellbeing": 1, "time": 0 },
-      { "label": "Move to a smaller flat", "money": 200, "wellbeing": -1, "time": -1 }
-    ]
-  },
-  {
-    "title": "Lost Wallet",
-    "description": "You misplaced your wallet with some cash inside.",
-    "type": "negative_type_1",
-    "options": [
-      { "label": "Replace documents quickly", "money": -150, "wellbeing": 0, "time": -1 },
-      { "label": "Wait and hope it turns up", "money": 0, "wellbeing": -1, "time": 0 },
-      { "label": "Buy a tracker wallet", "money": -50, "wellbeing": 1, "time": 0 }
+      {
+        "label": "Cover using savings",
+        "savings_delta": -300,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": 0,
+        "time": 0
+      },
+      {
+        "label": "Use some emergency fund",
+        "savings_delta": -100,
+        "ef_delta": -200,
+        "wants_delta": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Move to a smaller flat",
+        "savings_delta": 200,
+        "ef_delta": 0,
+        "wants_delta": -100,
+        "wellbeing": -1,
+        "time": -1
+      }
     ]
   },
 
   {
-    "title": "Car Breakdown",
-    "description": "Your car needs major repairs after a breakdown.",
-    "type": "negative_type_2",
-    "ef_eligible": true,
-    "options": [
-      { "label": "Fix at the dealer", "money": -800, "wellbeing": 1, "time": 0 },
-      { "label": "Use public transport temporarily", "money": 200, "wellbeing": -1, "time": -1 },
-      { "label": "Borrow a car", "money": 0, "wellbeing": 0, "time": -1 }
-    ]
-  },
-  {
     "title": "Unexpected Medical Bill",
-    "description": "You get the flu and need treatment and rest.",
+    "description": "You fall sick and medical expenses arise.",
     "type": "negative_type_2",
-    "ef_eligible": true,
     "options": [
-      { "label": "Private clinic visit", "money": -600, "wellbeing": 1, "time": -1 },
-      { "label": "Public healthcare", "money": -200, "wellbeing": 0, "time": -2 },
-      { "label": "Ignore it", "money": 0, "wellbeing": -3, "time": 0 }
+      {
+        "label": "Private clinic (use EF)",
+        "savings_delta": 0,
+        "ef_delta": -600,
+        "wants_delta": 0,
+        "wellbeing": 2,
+        "time": -1
+      },
+      {
+        "label": "Public healthcare (use savings)",
+        "savings_delta": -200,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": 0,
+        "time": -2
+      },
+      {
+        "label": "Ignore it",
+        "savings_delta": 0,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": -3,
+        "time": 0
+      }
     ]
   },
+
   {
     "title": "Family Emergency",
-    "description": "A relative needs urgent financial help.",
+    "description": "A relative needs urgent financial support.",
     "type": "negative_type_2",
-    "ef_eligible": true,
     "options": [
-      { "label": "Cover full cost", "money": -900, "wellbeing": 2, "time": -1 },
-      { "label": "Contribute partially", "money": -400, "wellbeing": 1, "time": 0 },
-      { "label": "Decline to help", "money": 0, "wellbeing": -2, "time": 0 }
+      {
+        "label": "Cover full cost (EF + savings)",
+        "savings_delta": -300,
+        "ef_delta": -600,
+        "wants_delta": 0,
+        "wellbeing": 2,
+        "time": -1
+      },
+      {
+        "label": "Contribute partially",
+        "savings_delta": -150,
+        "ef_delta": -250,
+        "wants_delta": 0,
+        "wellbeing": 1,
+        "time": 0
+      },
+      {
+        "label": "Decline to help",
+        "savings_delta": 0,
+        "ef_delta": 0,
+        "wants_delta": 0,
+        "wellbeing": -2,
+        "time": 0
+      }
     ]
   }
 ]
