@@ -139,63 +139,59 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# KPI SECTION (all inside one 3D box)
+# KPI SECTION (Correctly wrapped inside 3D card)
 # -------------------------------------------------
 
 remaining = int(p["income"] - p["fixed_costs"])
 
-st.markdown("<div class='kpi-box'>", unsafe_allow_html=True)
-k1, k2, k3, k4 = st.columns(4, gap="large")
+# Streamlit-safe wrapper container
+with st.container():
 
-with k1:
-    st.markdown("#### 💰 Budget Overview")
-    st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
-    st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
-    st.markdown(f"**Remaining:** {fmt(remaining)}")
+    # 3D box styling (background only)
+    st.markdown("""
+    <div class='kpi-box'>
+    """, unsafe_allow_html=True)
 
-with k2:
-    st.markdown("#### 🎯 Savings Goal")
-    goal = fs.get("goal", 5000)
-    pct = p["savings"] / goal if goal else 0
-    st.progress(min(1.0, pct))
-    st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
-    p["allocation"]["savings"] = st.number_input(
-        "Monthly allocation (Savings):",
-        0,
-        remaining,
-        int(p["allocation"]["savings"]),
-        50,
-        key="alloc_sav",
-    )
+    # Place all KPI columns INSIDE the HTML card
+    k1, k2, k3, k4 = st.columns([1.2, 1, 1, 1], gap="large")
 
-with k3:
-    st.markdown("#### 🛟 Emergency Fund")
-    st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
-    st.caption(f"Cap: {fmt(p['ef_cap'])}")
-    p["allocation"]["ef"] = st.number_input(
-        "Monthly allocation (EF):",
-        0,
-        remaining,
-        int(p["allocation"]["ef"]),
-        50,
-        key="alloc_ef",
-    )
+    with k1:
+        st.markdown("#### 💰 Budget Overview")
+        st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
+        st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
+        st.markdown(f"**Remaining:** {fmt(remaining)}")
 
-with k4:
-    st.markdown("#### 🎉 Wants Fund")
-    st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
-    st.caption("Cap: None")
-    p["allocation"]["wants"] = st.number_input(
-        "Monthly allocation (Wants):",
-        0,
-        remaining,
-        int(p["allocation"]["wants"]),
-        50,
-        key="alloc_w",
-    )
+    with k2:
+        st.markdown("#### 🎯 Savings Goal")
+        goal = fs.get("goal", 5000)
+        pct = p["savings"] / goal if goal else 0
+        st.progress(min(1.0, pct))
+        st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
+        p["allocation"]["savings"] = st.number_input(
+            "Monthly allocation (Savings):", 0, remaining,
+            int(p["allocation"]["savings"]), 50, key="alloc_sav"
+        )
 
-st.markdown("</div>", unsafe_allow_html=True)
+    with k3:
+        st.markdown("#### 🛟 Emergency Fund")
+        st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
+        st.caption(f"Cap: {fmt(p['ef_cap'])}")
+        p["allocation"]["ef"] = st.number_input(
+            "Monthly allocation (EF):", 0, remaining,
+            int(p["allocation"]["ef"]), 50, key="alloc_ef"
+        )
 
+    with k4:
+        st.markdown("#### 🎉 Wants Fund")
+        st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
+        st.caption("Cap: None")
+        p["allocation"]["wants"] = st.number_input(
+            "Monthly allocation (Wants):", 0, remaining,
+            int(p["allocation"]["wants"]), 50, key="alloc_w"
+        )
+
+    # Close the 3D box
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------------------------
 # Game Logic
