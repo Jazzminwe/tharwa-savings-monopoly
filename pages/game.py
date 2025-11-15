@@ -328,6 +328,8 @@ with left:
 
             if not ok:
                 st.warning(f"❗ {msg} Please choose a different option.")
+                # 🔒 Pause this run completely so nothing progresses
+                st.stop()
             else:
                 # 2) Commit new balances and stats
                 p["savings"] = new_state["savings"]
@@ -346,6 +348,7 @@ with left:
                 st.success("✅ Decision saved! Next round starting...")
                 time.sleep(0.4)
                 st.rerun()
+
 
 with right:
     st.markdown('<div class="section-title">❤️⚡ Wellbeing / Time</div>', unsafe_allow_html=True)
