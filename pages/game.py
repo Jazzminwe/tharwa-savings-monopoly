@@ -129,6 +129,23 @@ with k1:
     st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
     st.markdown(f"**Remaining:** {fmt(remaining)}")
 
+# ---- 3D WRAPPER START ----
+st.markdown(
+    """
+    <div style='
+        background-color: #fefefe;
+        padding: 25px;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+        margin-bottom: 25px;
+    '>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ---- CONTENT INSIDE 3D BOX ----
+k2, k3, k4 = st.columns(3)
+
 with k2:
     st.markdown("#### 🎯 Savings Goal")
     goal = fs.get("goal", 5000)
@@ -136,7 +153,12 @@ with k2:
     st.progress(min(1.0, pct))
     st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
     p["allocation"]["savings"] = st.number_input(
-        "Monthly allocation (Savings):", 0, remaining, int(p["allocation"]["savings"]), 50, key="alloc_sav"
+        "Monthly allocation (Savings):",
+        0,
+        remaining,
+        int(p["allocation"]["savings"]),
+        50,
+        key="alloc_sav"
     )
 
 with k3:
@@ -144,7 +166,12 @@ with k3:
     st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
     st.caption(f"Cap: {fmt(p['ef_cap'])}")
     p["allocation"]["ef"] = st.number_input(
-        "Monthly allocation (EF):", 0, remaining, int(p["allocation"]["ef"]), 50, key="alloc_ef"
+        "Monthly allocation (EF):",
+        0,
+        remaining,
+        int(p["allocation"]["ef"]),
+        50,
+        key="alloc_ef"
     )
 
 with k4:
@@ -152,8 +179,17 @@ with k4:
     st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
     st.caption("Cap: None")
     p["allocation"]["wants"] = st.number_input(
-        "Monthly allocation (Wants):", 0, remaining, int(p["allocation"]["wants"]), 50, key="alloc_w"
+        "Monthly allocation (Wants):",
+        0,
+        remaining,
+        int(p["allocation"]["wants"]),
+        50,
+        key="alloc_w"
     )
+
+# ---- 3D WRAPPER END ----
+st.markdown("</div>", unsafe_allow_html=True)
+
 
 # -------------------------------------------------
 # Game Logic
