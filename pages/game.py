@@ -116,20 +116,12 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-
 # -------------------------------------------------
-# KPI Row
+# KPI Row (all inside ONE 3D box)
 # -------------------------------------------------
 remaining = int(p["income"] - p["fixed_costs"])
-k1, k2, k3, k4 = st.columns(4, gap="small")
 
-with k1:
-    st.markdown("#### 💰 Budget Overview")
-    st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
-    st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
-    st.markdown(f"**Remaining:** {fmt(remaining)}")
-
-# ---- 3D WRAPPER START ----
+# ---- 3D WRAPPER START (before columns!) ----
 st.markdown(
     """
     <div style='
@@ -143,12 +135,17 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ---- CREATE A CONTAINER INSIDE DIV ----
+# container inside the box
 box = st.container()
 
-# ---- PLACE COLUMNS *INSIDE* THE CONTAINER ----
 with box:
-    k2, k3, k4 = st.columns(3)
+    k1, k2, k3, k4 = st.columns(4, gap="small")
+
+    with k1:
+        st.markdown("#### 💰 Budget Overview")
+        st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
+        st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
+        st.markdown(f"**Remaining:** {fmt(remaining)}")
 
     with k2:
         st.markdown("#### 🎯 Savings Goal")
@@ -162,7 +159,7 @@ with box:
             remaining,
             int(p["allocation"]["savings"]),
             50,
-            key="alloc_sav"
+            key="alloc_sav",
         )
 
     with k3:
@@ -175,7 +172,7 @@ with box:
             remaining,
             int(p["allocation"]["ef"]),
             50,
-            key="alloc_ef"
+            key="alloc_ef",
         )
 
     with k4:
@@ -188,7 +185,7 @@ with box:
             remaining,
             int(p["allocation"]["wants"]),
             50,
-            key="alloc_w"
+            key="alloc_w",
         )
 
 # ---- 3D WRAPPER END ----
