@@ -262,9 +262,6 @@ with left:
             st.rerun()
 
 with right:
-    st.markdown('<div class="section-title">📈 Game Progress</div>', unsafe_allow_html=True)
-    st.markdown(f"**Rounds:** {rp}/{tr}")
-    st.progress(pct_rounds)
     st.markdown('<div class="section-title">❤️⚡ Wellbeing / Time</div>', unsafe_allow_html=True)
     st.markdown(f"**Wellbeing:** {emoji_bar(p['emotion'], '❤️')}")
     st.markdown(f"**Time:** {emoji_bar(p['time'], '⚡')}")
