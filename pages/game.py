@@ -121,77 +121,59 @@ st.markdown(f"""
 # -------------------------------------------------
 remaining = int(p["income"] - p["fixed_costs"])
 
-# ---- 3D WRAPPER START (before columns!) ----
-st.markdown(
-    """
-    <div style='
-        background-color: #fefefe;
-        padding: 25px;
-        border-radius: 20px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-        margin-bottom: 25px;
-    '>
-    """,
-    unsafe_allow_html=True,
-)
+left_col, right_col = st.columns([1, 3], gap="medium")
 
-# container inside the box
-box = st.container()
+with left_col:
+    st.markdown("#### 💰 Budget Overview")
+    st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
+    st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
+    st.markdown(f"**Remaining:** {fmt(remaining)}")
 
-with box:
-    k1, k2, k3, k4 = st.columns(4, gap="small")
+with right_col:
+    # 3D-ish card wrapper
+    with st.container(border=True):
+        c2, c3, c4 = st.columns(3, gap="small")
 
-    with k1:
-        st.markdown("#### 💰 Budget Overview")
-        st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
-        st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
-        st.markdown(f"**Remaining:** {fmt(remaining)}")
+        with c2:
+            st.markdown("#### 🎯 Savings Goal")
+            goal = fs.get("goal", 5000)
+            pct = p["savings"] / goal if goal else 0
+            st.progress(min(1.0, pct))
+            st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
+            p["allocation"]["savings"] = st.number_input(
+                "Monthly allocation (Savings):",
+                0,
+                remaining,
+                int(p["allocation"]["savings"]),
+                50,
+                key="alloc_sav",
+            )
 
-    with k2:
-        st.markdown("#### 🎯 Savings Goal")
-        goal = fs.get("goal", 5000)
-        pct = p["savings"] / goal if goal else 0
-        st.progress(min(1.0, pct))
-        st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
-        p["allocation"]["savings"] = st.number_input(
-            "Monthly allocation (Savings):",
-            0,
-            remaining,
-            int(p["allocation"]["savings"]),
-            50,
-            key="alloc_sav",
-        )
+        with c3:
+            st.markdown("#### 🛟 Emergency Fund")
+            st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
+            st.caption(f"Cap: {fmt(p['ef_cap'])}")
+            p["allocation"]["ef"] = st.number_input(
+                "Monthly allocation (EF):",
+                0,
+                remaining,
+                int(p["allocation"]["ef"]),
+                50,
+                key="alloc_ef",
+            )
 
-    with k3:
-        st.markdown("#### 🛟 Emergency Fund")
-        st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
-        st.caption(f"Cap: {fmt(p['ef_cap'])}")
-        p["allocation"]["ef"] = st.number_input(
-            "Monthly allocation (EF):",
-            0,
-            remaining,
-            int(p["allocation"]["ef"]),
-            50,
-            key="alloc_ef",
-        )
-
-    with k4:
-        st.markdown("#### 🎉 Wants Fund")
-        st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
-        st.caption("Cap: None")
-        p["allocation"]["wants"] = st.number_input(
-            "Monthly allocation (Wants):",
-            0,
-            remaining,
-            int(p["allocation"]["wants"]),
-            50,
-            key="alloc_w",
-        )
-
-# ---- 3D WRAPPER END ----
-st.markdown("</div>", unsafe_allow_html=True)
-
-
+        with c4:
+            st.markdown("#### 🎉 Wants Fund")
+            st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
+            st.caption("Cap: None")
+            p["allocation"]["wants"] = st.number_input(
+                "Monthly allocation (Wants):",
+                0,
+                remaining,
+                int(p["allocation"]["wants"]),
+                50,
+                key="alloc_w",
+            )
 
 # -------------------------------------------------
 # Game Logic
