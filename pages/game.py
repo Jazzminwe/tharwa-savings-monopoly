@@ -182,42 +182,67 @@ with st.container(border=True):
             key="alloc_w",
         )
 
-
 # -------------------------------------------------
-# Game Logic
+# Game Logic – new per-fund delta logic
 # -------------------------------------------------
-def apply_monthly_income(p):
-    """Allocate this month's budget into the three pots."""
-    p["ef_balance"] = min(p["ef_cap"], p["ef_balance"] + p["allocation"]["ef"])
-    p["wants_balance"] += p["allocation"]["wants"]
-    p["savings"] += p["allocation"]["savings"]
+def simulate_choice_and_validate(p, selected):
+    """
+    Simulate: starting from current pots, add monthly allocation,
+    then apply the card deltas. Return whether it's valid and
+    the resulting new state if yes.
+    """
 
-
-def apply_card_effects(p, selected):
-    money = selected.get("money", 0)
-    wellbeing = selected.get("wellbeing", 0)
+    # Deltas from the card (new schema)
+    s_delta = selected.get("savings_delta", 0)
+    ef_delta = selected.get("ef_delta", 0)
+    w_delta = selected.get("wants_delta", 0)
+    wellbeing_delta = selected.get("wellbeing", 0)
     time_cost = selected.get("time", 0)
 
-    # Money logic: negative ⇒ pay from funds, positive ⇒ goes to savings
-    if money < 0:
-        need = abs(money)
-        for fund in ["wants_balance", "savings", "ef_balance"]:
-            take = min(need, p[fund])
-            p[fund] -= take
-            need -= take
-            if need <= 0:
-                break
-        if need > 0:
-            st.warning("💸 Some expenses couldn’t be covered!")
-    else:
-        p["savings"] += money
+    # 1) Apply monthly allocation inflows
+    alloc_sav = p["allocation"].get("savings", 0)
+    alloc_ef = p["allocation"].get("ef", 0)
+    alloc_w = p["allocation"].get("wants", 0)
 
-    # Wellbeing and time
-    p["emotion"] = max(0, min(10, p["emotion"] + wellbeing))
-    if p["time"] - time_cost < 0:
-        st.error("⏳ Not enough time to take this action.")
-        st.stop()
-    p["time"] -= time_cost
+    savings_after_alloc = p["savings"] + alloc_sav
+    ef_after_alloc = min(p["ef_cap"], p["ef_balance"] + alloc_ef)
+    wants_after_alloc = p["wants_balance"] + alloc_w
+
+    # 2) Apply card deltas on top
+    new_savings = savings_after_alloc + s_delta
+    new_ef = ef_after_alloc + ef_delta
+    new_wants = wants_after_alloc + w_delta
+
+    # 3) Validate pots non-negative
+    if new_savings < 0:
+        return False, "Not enough in your savings pot to cover this decision.", None
+    if new_ef < 0:
+        return False, "Not enough in your emergency fund to cover this decision.", None
+    if new_wants < 0:
+        return False, "Not enough in your wants fund to cover this decision.", None
+
+    # 4) Validate time
+    new_time = p["time"] - time_cost
+    if new_time < 0:
+        return False, "Not enough time/energy to take this action.", None
+
+    # 5) Validate wellbeing
+    new_emotion = p["emotion"] + wellbeing_delta
+    if new_emotion < 0 or new_emotion > 10:
+        return False, "This decision would push well-being out of range (0–10).", None
+
+    # Clamp wellbeing inside range just in case
+    new_emotion = max(0, min(10, new_emotion))
+
+    # If everything is fine, return the prospective new state
+    new_state = {
+        "savings": new_savings,
+        "ef_balance": new_ef,
+        "wants_balance": new_wants,
+        "time": new_time,
+        "emotion": new_emotion,
+    }
+    return True, "", new_state
 
 
 def end_popup(msg, success=False):
@@ -240,7 +265,7 @@ left, right = st.columns([2, 1], gap="large")
 with left:
     st.markdown('<div class="section-title">🎴 Game Round</div>', unsafe_allow_html=True)
 
-    # End conditions
+    # End conditions (global)
     if p["emotion"] <= 0:
         end_popup("💥 You burned out! Game over.", success=False)
     if p["savings"] >= fs.get("goal", 5000):
@@ -268,7 +293,7 @@ with left:
         with open("data/life_cards.json", "r") as f:
             st.session_state.life_cards = json.load(f)
 
-    # Draw a new card – NOTE: no monthly income here anymore
+    # Draw a new card (no monthly income applied here; it's inside simulation)
     if draw and not draw_disabled:
         p["current_card"] = random.choice(st.session_state.life_cards)
         p["choice_made"] = False
@@ -284,31 +309,43 @@ with left:
             st.write(card["description"])
 
         options = card.get("options", [])
+
+        # New display string: show deltas per fund + wellbeing + time
         display_opts = [
-            f"{opt['label']} → Money: {opt.get('money',0)}, Wellbeing: {opt.get('wellbeing',0)}, Time: {opt.get('time',0)}"
+            f"{opt['label']} → Savings: {opt.get('savings_delta',0)}, "
+            f"EF: {opt.get('ef_delta',0)}, Wants: {opt.get('wants_delta',0)}, "
+            f"Wellbeing: {opt.get('wellbeing',0)}, Time: {opt.get('time',0)}"
             for opt in options
         ]
+
         choice = st.radio("Choose an option:", display_opts, key="decision_choice")
 
         if st.button("💾 Save Decision", key="save_decision"):
             selected = options[display_opts.index(choice)]
 
-            # 1) Apply card effects for this month
-            apply_card_effects(p, selected)
+            # 1) Simulate: allocation inflows + card deltas, validate
+            ok, msg, new_state = simulate_choice_and_validate(p, selected)
 
-            # 2) THEN allocate this month's budget into the pots
-            apply_monthly_income(p)
+            if not ok:
+                st.warning(f"❗ {msg} Please choose a different option.")
+            else:
+                # 2) Commit new balances and stats
+                p["savings"] = new_state["savings"]
+                p["ef_balance"] = new_state["ef_balance"]
+                p["wants_balance"] = new_state["wants_balance"]
+                p["time"] = new_state["time"]
+                p["emotion"] = new_state["emotion"]
 
-            # 3) Finish the round
-            p["rounds_played"] += 1
-            p["decision_log"].append(f"{card['title']} — {choice}")
-            p["choice_made"] = True
-            p["current_card"] = None
+                # 3) Finish the round
+                p["rounds_played"] += 1
+                p["decision_log"].append(f"{card['title']} — {choice}")
+                p["choice_made"] = True
+                p["current_card"] = None
 
-            st.session_state.player = p
-            st.success("✅ Decision saved! Next round starting...")
-            time.sleep(0.4)
-            st.rerun()
+                st.session_state.player = p
+                st.success("✅ Decision saved! Next round starting...")
+                time.sleep(0.4)
+                st.rerun()
 
 with right:
     st.markdown('<div class="section-title">❤️⚡ Wellbeing / Time</div>', unsafe_allow_html=True)
