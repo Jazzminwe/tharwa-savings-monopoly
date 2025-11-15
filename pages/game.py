@@ -117,63 +117,83 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# KPI Row (all inside ONE 3D box)
+# KPI Row (ALL inside one 3D box)
 # -------------------------------------------------
 remaining = int(p["income"] - p["fixed_costs"])
 
-left_col, right_col = st.columns([1, 3], gap="medium")
+with st.container(border=True):
 
-with left_col:
-    st.markdown("#### 💰 Budget Overview")
-    st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
-    st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
-    st.markdown(f"**Remaining:** {fmt(remaining)}")
+    # ---------- Top row: Budget overview ----------
+    st.markdown("### 💰 Budget Overview")
+    b1, b2, b3 = st.columns(3, gap="medium")
 
-with right_col:
-    # 3D-ish card wrapper
-    with st.container(border=True):
-        c2, c3, c4 = st.columns(3, gap="small")
+    with b1:
+        st.markdown(f"**Monthly Income:** {fmt(p['income'])}")
 
-        with c2:
-            st.markdown("#### 🎯 Savings Goal")
-            goal = fs.get("goal", 5000)
-            pct = p["savings"] / goal if goal else 0
-            st.progress(min(1.0, pct))
-            st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
-            p["allocation"]["savings"] = st.number_input(
-                "Monthly allocation (Savings):",
-                0,
-                remaining,
-                int(p["allocation"]["savings"]),
-                50,
-                key="alloc_sav",
-            )
+    with b2:
+        st.markdown(f"**Fixed Costs:** {fmt(p['fixed_costs'])}")
 
-        with c3:
-            st.markdown("#### 🛟 Emergency Fund")
-            st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
-            st.caption(f"Cap: {fmt(p['ef_cap'])}")
-            p["allocation"]["ef"] = st.number_input(
-                "Monthly allocation (EF):",
-                0,
-                remaining,
-                int(p["allocation"]["ef"]),
-                50,
-                key="alloc_ef",
-            )
+    with b3:
+        st.markdown(f"**Remaining:** {fmt(remaining)}")
 
-        with c4:
-            st.markdown("#### 🎉 Wants Fund")
-            st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
-            st.caption("Cap: None")
-            p["allocation"]["wants"] = st.number_input(
-                "Monthly allocation (Wants):",
-                0,
-                remaining,
-                int(p["allocation"]["wants"]),
-                50,
-                key="alloc_w",
-            )
+    st.markdown("---")
+
+    # ---------- Bottom row: Funds (3 columns) ----------
+    c2, c3, c4 = st.columns(3, gap="medium")
+
+    # -----------------------------------------------
+    # SAVINGS GOAL
+    # -----------------------------------------------
+    with c2:
+        st.markdown("#### 🎯 Savings Goal")
+        goal = fs.get("goal", 5000)
+        pct = p["savings"] / goal if goal else 0
+
+        st.progress(min(1.0, pct))
+        st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
+
+        p["allocation"]["savings"] = st.number_input(
+            "Monthly allocation (Savings):",
+            0,
+            remaining,
+            int(p["allocation"]["savings"]),
+            50,
+            key="alloc_sav",
+        )
+
+    # -----------------------------------------------
+    # EMERGENCY FUND
+    # -----------------------------------------------
+    with c3:
+        st.markdown("#### 🛟 Emergency Fund")
+        st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
+        st.caption(f"Cap: {fmt(p['ef_cap'])}")
+
+        p["allocation"]["ef"] = st.number_input(
+            "Monthly allocation (EF):",
+            0,
+            remaining,
+            int(p["allocation"]["ef"]),
+            50,
+            key="alloc_ef",
+        )
+
+    # -----------------------------------------------
+    # WANTS FUND
+    # -----------------------------------------------
+    with c4:
+        st.markdown("#### 🎉 Wants Fund")
+        st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
+        st.caption("Cap: None")
+
+        p["allocation"]["wants"] = st.number_input(
+            "Monthly allocation (Wants):",
+            0,
+            remaining,
+            int(p["allocation"]["wants"]),
+            50,
+            key="alloc_w",
+        )
 
 # -------------------------------------------------
 # Game Logic
