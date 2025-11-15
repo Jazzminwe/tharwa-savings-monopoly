@@ -17,6 +17,7 @@ def emoji_bar(value, emoji, max_value=10):
     v = int(max(0, min(max_value, value)))
     return emoji * v + "▫️" * (max_value - v) + f" ({v}/{max_value})"
 
+
 # -------------------------------------------------
 # Guards
 # -------------------------------------------------
@@ -48,7 +49,8 @@ p.setdefault("allocation", {"savings": 0, "ef": 0, "wants": 0})
 # -------------------------------------------------
 # Style (fixed header layout)
 # -------------------------------------------------
-st.markdown("""
+st.markdown(
+    """
 <style>
 div.block-container {
   max-width: 1280px;
@@ -96,7 +98,9 @@ div[data-testid="stNumberInput"] input { width: 100% !important; font-size: 0.9r
 /* Progress bar */
 .stProgress > div > div { height: 6px !important; border-radius: 3px !important; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # -------------------------------------------------
 # Header (clean + aligned)
@@ -105,7 +109,8 @@ rp = p["rounds_played"]
 tr = fs.get("rounds", 10)
 pct_rounds = min(1.0, float(rp) / max(1, float(tr)))
 
-st.markdown(f"""
+st.markdown(
+    f"""
 <div class="header-row">
   <div class="header-title">💰 Savings Monopoly</div>
   <div class="rounds">
@@ -114,7 +119,9 @@ st.markdown(f"""
     <div>{rp}/{tr} rounds played</div>
   </div>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # -------------------------------------------------
 # KPI ROW – all 4 KPIs in ONE row & ONE box
@@ -137,7 +144,7 @@ with st.container(border=True):
         goal = fs.get("goal", 5000)
         pct = p["savings"] / goal if goal else 0
         st.progress(min(1.0, pct))
-        st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
+        st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct * 100)}%)")
         p["allocation"]["savings"] = st.number_input(
             "Monthly allocation (Savings):",
             0,
@@ -180,15 +187,18 @@ with st.container(border=True):
 # Game Logic
 # -------------------------------------------------
 def apply_monthly_income(p):
+    """Allocate this month's budget into the three pots."""
     p["ef_balance"] = min(p["ef_cap"], p["ef_balance"] + p["allocation"]["ef"])
     p["wants_balance"] += p["allocation"]["wants"]
     p["savings"] += p["allocation"]["savings"]
+
 
 def apply_card_effects(p, selected):
     money = selected.get("money", 0)
     wellbeing = selected.get("wellbeing", 0)
     time_cost = selected.get("time", 0)
 
+    # Money logic: negative ⇒ pay from funds, positive ⇒ goes to savings
     if money < 0:
         need = abs(money)
         for fund in ["wants_balance", "savings", "ef_balance"]:
@@ -202,11 +212,13 @@ def apply_card_effects(p, selected):
     else:
         p["savings"] += money
 
+    # Wellbeing and time
     p["emotion"] = max(0, min(10, p["emotion"] + wellbeing))
     if p["time"] - time_cost < 0:
         st.error("⏳ Not enough time to take this action.")
         st.stop()
     p["time"] -= time_cost
+
 
 def end_popup(msg, success=False):
     if success:
@@ -219,6 +231,7 @@ def end_popup(msg, success=False):
         st.rerun()
     st.stop()
 
+
 # -------------------------------------------------
 # Game Round + Stats
 # -------------------------------------------------
@@ -227,6 +240,7 @@ left, right = st.columns([2, 1], gap="large")
 with left:
     st.markdown('<div class="section-title">🎴 Game Round</div>', unsafe_allow_html=True)
 
+    # End conditions
     if p["emotion"] <= 0:
         end_popup("💥 You burned out! Game over.", success=False)
     if p["savings"] >= fs.get("goal", 5000):
@@ -240,21 +254,27 @@ with left:
         if p["savings"] >= fs.get("goal", 5000):
             end_popup("🏆 The game ended — you achieved your goal! 🥳", success=True)
         else:
-            end_popup(f"⏰ The game ended after {tr} rounds — goal not reached. Try again!", success=False)
+            end_popup(
+                f"⏰ The game ended after {tr} rounds — goal not reached. Try again!",
+                success=False,
+            )
 
+    # Draw button
     draw_disabled = bool(p.get("current_card") or p["rounds_played"] >= tr)
     draw = st.button("🎴 Draw Life Card", type="primary", disabled=draw_disabled)
 
+    # Load cards once
     if "life_cards" not in st.session_state:
         with open("data/life_cards.json", "r") as f:
             st.session_state.life_cards = json.load(f)
 
+    # Draw a new card – NOTE: no monthly income here anymore
     if draw and not draw_disabled:
-        apply_monthly_income(p)
         p["current_card"] = random.choice(st.session_state.life_cards)
         p["choice_made"] = False
         st.session_state.player = p
 
+    # Show card / choices
     if not p.get("current_card"):
         st.caption("Draw a life card to start the month.")
     else:
@@ -272,11 +292,19 @@ with left:
 
         if st.button("💾 Save Decision", key="save_decision"):
             selected = options[display_opts.index(choice)]
+
+            # 1) Apply card effects for this month
             apply_card_effects(p, selected)
+
+            # 2) THEN allocate this month's budget into the pots
+            apply_monthly_income(p)
+
+            # 3) Finish the round
             p["rounds_played"] += 1
             p["decision_log"].append(f"{card['title']} — {choice}")
             p["choice_made"] = True
             p["current_card"] = None
+
             st.session_state.player = p
             st.success("✅ Decision saved! Next round starting...")
             time.sleep(0.4)
