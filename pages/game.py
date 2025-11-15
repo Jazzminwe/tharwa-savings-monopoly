@@ -143,52 +143,57 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ---- CONTENT INSIDE 3D BOX ----
-k2, k3, k4 = st.columns(3)
+# ---- CREATE A CONTAINER INSIDE DIV ----
+box = st.container()
 
-with k2:
-    st.markdown("#### 🎯 Savings Goal")
-    goal = fs.get("goal", 5000)
-    pct = p["savings"] / goal if goal else 0
-    st.progress(min(1.0, pct))
-    st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
-    p["allocation"]["savings"] = st.number_input(
-        "Monthly allocation (Savings):",
-        0,
-        remaining,
-        int(p["allocation"]["savings"]),
-        50,
-        key="alloc_sav"
-    )
+# ---- PLACE COLUMNS *INSIDE* THE CONTAINER ----
+with box:
+    k2, k3, k4 = st.columns(3)
 
-with k3:
-    st.markdown("#### 🛟 Emergency Fund")
-    st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
-    st.caption(f"Cap: {fmt(p['ef_cap'])}")
-    p["allocation"]["ef"] = st.number_input(
-        "Monthly allocation (EF):",
-        0,
-        remaining,
-        int(p["allocation"]["ef"]),
-        50,
-        key="alloc_ef"
-    )
+    with k2:
+        st.markdown("#### 🎯 Savings Goal")
+        goal = fs.get("goal", 5000)
+        pct = p["savings"] / goal if goal else 0
+        st.progress(min(1.0, pct))
+        st.markdown(f"**{fmt(p['savings'])} / {fmt(goal)}** ({int(pct*100)}%)")
+        p["allocation"]["savings"] = st.number_input(
+            "Monthly allocation (Savings):",
+            0,
+            remaining,
+            int(p["allocation"]["savings"]),
+            50,
+            key="alloc_sav"
+        )
 
-with k4:
-    st.markdown("#### 🎉 Wants Fund")
-    st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
-    st.caption("Cap: None")
-    p["allocation"]["wants"] = st.number_input(
-        "Monthly allocation (Wants):",
-        0,
-        remaining,
-        int(p["allocation"]["wants"]),
-        50,
-        key="alloc_w"
-    )
+    with k3:
+        st.markdown("#### 🛟 Emergency Fund")
+        st.markdown(f"**Balance:** {fmt(p['ef_balance'])}")
+        st.caption(f"Cap: {fmt(p['ef_cap'])}")
+        p["allocation"]["ef"] = st.number_input(
+            "Monthly allocation (EF):",
+            0,
+            remaining,
+            int(p["allocation"]["ef"]),
+            50,
+            key="alloc_ef"
+        )
+
+    with k4:
+        st.markdown("#### 🎉 Wants Fund")
+        st.markdown(f"**Balance:** {fmt(p['wants_balance'])}")
+        st.caption("Cap: None")
+        p["allocation"]["wants"] = st.number_input(
+            "Monthly allocation (Wants):",
+            0,
+            remaining,
+            int(p["allocation"]["wants"]),
+            50,
+            key="alloc_w"
+        )
 
 # ---- 3D WRAPPER END ----
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # -------------------------------------------------
